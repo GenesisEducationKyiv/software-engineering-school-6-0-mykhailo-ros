@@ -6,9 +6,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("no .env file, using environment variables")
+	}
 	database, err := db.Connect()
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
