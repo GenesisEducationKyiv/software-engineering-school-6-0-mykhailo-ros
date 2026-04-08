@@ -6,8 +6,8 @@
 vendor/
 
 # env files 
-.env
-.env.*
+.env*
+!.env.example
 
 # ide
 .vscode/
