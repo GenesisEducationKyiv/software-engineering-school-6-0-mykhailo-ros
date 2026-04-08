@@ -1,0 +1,18 @@
+# binary output
+/bin/
+*.exe
+
+# go
+vendor/
+
+# env files 
+.env
+.env.*
+
+# ide
+.vscode/
+.idea/
+
+# os
+.DS_Store
+Thumbs.db
