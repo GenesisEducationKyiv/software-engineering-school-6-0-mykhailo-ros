@@ -82,6 +82,7 @@ func (r *SubscriptionRepo) FindByEmail(email string) ([]Subscription, error) {
 		if err := rows.Scan(&s.ID, &s.Email, &s.Repo, &s.Confirmed, &s.ConfirmToken, &s.UnsubscribeToken, &s.LastSeenTag); err != nil {
 			return nil, err
 		}
+		subs = append(subs, s)
 	}
 	return subs, nil
 }
