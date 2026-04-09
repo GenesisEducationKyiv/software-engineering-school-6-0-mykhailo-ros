@@ -2,8 +2,13 @@ package main
 
 import (
 	"github-release-notifier/internal/db"
+	"github-release-notifier/internal/github"
+	"github-release-notifier/internal/handler"
+	"github-release-notifier/internal/mailer"
+	"github-release-notifier/internal/repository"
+	"github-release-notifier/internal/service"
 	"log"
-	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -25,23 +30,18 @@ func main() {
 
 	log.Println("DB connected and migrations applied")
 
+	repo := repository.NewSubscriptionRepo(database)
+	githubClient := github.NewClient(os.Getenv("GITHUB_TOKEN"))
+	mailerClient := mailer.NewMailer()
+
+	svc := service.NewSubscription(repo, githubClient, mailerClient)
+	h := handler.NewSubscriptionHandler(svc)
+
 	r := gin.Default()
-
-	r.POST("/api/subscribe", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
-	})
-
-	r.GET("/api/confirm/:token", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
-	})
-
-	r.GET("/api/unsubscribe/:token", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
-	})
-
-	r.GET("/api/subscriptions", func(c *gin.Context) {
-		c.JSON(http.StatusOK, []gin.H{})
-	})
+	r.POST("/api/subscribe", h.Subscribe)
+	r.GET("/api/confirm/:token", h.Confirm)
+	r.GET("/api/unsubscribe/:token", h.Unsubscribe)
+	r.GET("/api/subscriptions", h.GetSubscriptions)
 
 	r.Run(":8080")
 }
