@@ -3,10 +3,13 @@ package handler
 import (
 	"github-release-notifier/internal/service"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
+
+var emailRegexp = regexp.MustCompile(`^[^@]+@[^@]+\.[^@]+$`)
 
 type SubscriptionHandler struct {
 	service *service.Subscription
@@ -22,6 +25,10 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 
 	if email == "" || repo == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "email and repo are required"})
+		return
+	}
+	if !emailRegexp.MatchString(email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong email format"})
 		return
 	}
 	if !strings.Contains(repo, "/") || len(strings.Split(repo, "/")) != 2 {
