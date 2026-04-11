@@ -20,8 +20,23 @@ func NewSubscriptionHandler(service *service.Subscription) *SubscriptionHandler 
 }
 
 func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
-	email := strings.TrimSpace(c.PostForm("email"))
-	repo := strings.TrimSpace(c.PostForm("repo"))
+	var email, repo string
+
+	if c.ContentType() == "application/json" {
+		var body struct {
+			Email string `json:"email"`
+			Repo  string `json:"repo"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+			return
+		}
+		email = strings.TrimSpace(body.Email)
+		repo = strings.TrimSpace(body.Repo)
+	} else {
+		email = strings.TrimSpace(c.PostForm("email"))
+		repo = strings.TrimSpace(c.PostForm("repo"))
+	}
 
 	if email == "" || repo == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "email and repo are required"})
