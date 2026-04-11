@@ -9,5 +9,7 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/main .
 COPY migrations/ migrations/
+COPY static/ static/
+COPY swagger.yaml .
 EXPOSE 8080
 CMD ["./main"]
