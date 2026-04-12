@@ -7,9 +7,11 @@ import (
 	"github-release-notifier/internal/handler"
 	"github-release-notifier/internal/mailer"
 	"github-release-notifier/internal/repository"
+	"github-release-notifier/internal/scheduler"
 	"github-release-notifier/internal/service"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -38,6 +40,8 @@ func main() {
 
 	svc := service.NewSubscription(repo, githubClient, mailerClient)
 	h := handler.NewSubscriptionHandler(svc)
+	scheduler := scheduler.NewScheduler(repo, githubClient, mailerClient, 10*time.Minute)
+	scheduler.Start()
 
 	r := gin.Default()
 	r.POST("/api/subscribe", h.Subscribe)

@@ -58,3 +58,12 @@ func (s *Scheduler) check() {
 		}
 	}
 }
+
+func (s *Scheduler) Start() {
+	go func() {
+		for {
+			s.check()
+			time.Sleep(s.interval)
+		}
+	}()
+}
