@@ -5,17 +5,22 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github-release-notifier/internal/cache"
 )
 
 type Client struct {
 	httpClient *http.Client
 	token      string
+	cache      *cache.Cache
 }
 
-func NewClient(token string) *Client {
+func NewClient(token string, cache *cache.Cache) *Client {
 	return &Client{
 		httpClient: &http.Client{},
 		token:      token,
+		cache:      cache,
 	}
 }
 
@@ -55,6 +60,14 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 }
 
 func (c *Client) GetLatestRelease(repo string) (*Release, error) {
+	cacheKey := "release:" + repo
+
+	if c.cache != nil {
+		if cached, err := c.cache.Get(cacheKey); err == nil {
+			return &Release{TagName: cached}, nil
+		}
+	}
+
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -81,6 +94,10 @@ func (c *Client) GetLatestRelease(repo string) (*Release, error) {
 	var release Release
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, err
+	}
+
+	if c.cache != nil && release.TagName != "" {
+		c.cache.Set(cacheKey, release.TagName, 10*time.Minute)
 	}
 
 	return &release, nil

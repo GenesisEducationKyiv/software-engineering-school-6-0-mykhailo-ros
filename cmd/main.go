@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github-release-notifier/internal/cache"
 	"github-release-notifier/internal/db"
 	"github-release-notifier/internal/github"
 	"github-release-notifier/internal/handler"
@@ -31,7 +32,8 @@ func main() {
 	log.Println("DB connected and migrations applied")
 
 	repo := repository.NewSubscriptionRepo(database)
-	githubClient := github.NewClient(os.Getenv("GITHUB_TOKEN"))
+	cacheClient := cache.NewCache()
+	githubClient := github.NewClient(os.Getenv("GITHUB_TOKEN"), cacheClient)
 	mailerClient := mailer.NewMailer()
 
 	svc := service.NewSubscription(repo, githubClient, mailerClient)
