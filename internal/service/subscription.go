@@ -4,19 +4,37 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github-release-notifier/internal/github"
-	"github-release-notifier/internal/mailer"
 	"github-release-notifier/internal/repository"
 	"os"
 )
 
-type Subscription struct {
-	repo   *repository.SubscriptionRepo
-	github *github.Client
-	mailer *mailer.Mailer
+type GithubClient interface {
+	RepoExists(repo string) (bool, error)
 }
 
-func NewSubscription(repo *repository.SubscriptionRepo, github *github.Client, mailer *mailer.Mailer) *Subscription {
+type Mailer interface {
+	SendConfirmation(to, repo, confirmURL string) error
+	SendReleaseNotification(to, repo, tag string) error
+}
+
+type SubscriptionRepository interface {
+	Create(email, repo, confirmToken, unsubscribeToken string) error
+	FindByConfirmToken(token string) (*repository.Subscription, error)
+	FindByUnsubscribeToken(token string) (*repository.Subscription, error)
+	Confirm(token string) error
+	DeleteByUnsubscribeToken(token string) error
+	FindByEmail(email string) ([]repository.Subscription, error)
+	FindAllConfirmed() ([]repository.Subscription, error)
+	UpdateLastSeenTag(id int, tag string) error
+}
+
+type Subscription struct {
+	repo   SubscriptionRepository
+	github GithubClient
+	mailer Mailer
+}
+
+func NewSubscription(repo SubscriptionRepository, github GithubClient, mailer Mailer) *Subscription {
 	return &Subscription{repo: repo, github: github, mailer: mailer}
 }
 
