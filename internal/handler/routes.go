@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github-release-notifier/internal/service"
+	"github-release-notifier/internal/repository"
 	"net/http"
 	"regexp"
 	"strings"
@@ -11,11 +11,18 @@ import (
 
 var emailRegexp = regexp.MustCompile(`^[^@]+@[^@]+\.[^@]+$`)
 
-type SubscriptionHandler struct {
-	service *service.Subscription
+type SubscriptionService interface {
+	Subscribe(email, repo string) error
+	Confirm(token string) error
+	Unsubscribe(token string) error
+	GetSubscriptions(email string) ([]repository.Subscription, error)
 }
 
-func NewSubscriptionHandler(service *service.Subscription) *SubscriptionHandler {
+type SubscriptionHandler struct {
+	service SubscriptionService
+}
+
+func NewSubscriptionHandler(service SubscriptionService) *SubscriptionHandler {
 	return &SubscriptionHandler{service: service}
 }
 
