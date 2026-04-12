@@ -74,7 +74,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 
 func (h *SubscriptionHandler) Confirm(c *gin.Context) {
 	token := c.Param("token")
-	if token == "" {
+	if len(token) != 32 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token"})
 		return
 	}
@@ -85,7 +85,7 @@ func (h *SubscriptionHandler) Confirm(c *gin.Context) {
 		return
 	}
 	if strings.Contains(err.Error(), "token not found") {
-		c.JSON(http.StatusNotFound, gin.H{"error": "invalid token"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 		return
 	}
 
@@ -94,7 +94,7 @@ func (h *SubscriptionHandler) Confirm(c *gin.Context) {
 
 func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
-	if token == "" {
+	if len(token) != 32 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token"})
 		return
 	}
@@ -114,8 +114,9 @@ func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
 
 func (h *SubscriptionHandler) GetSubscriptions(c *gin.Context) {
 	email := strings.TrimSpace(c.Query("email"))
-	if email == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "email is required"})
+	if email == "" || !emailRegexp.MatchString(email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+		return
 	}
 
 	subs, err := h.service.GetSubscriptions(email)
