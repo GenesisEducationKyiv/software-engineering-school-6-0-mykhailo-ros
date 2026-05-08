@@ -24,7 +24,7 @@ jobs:
       - name: Run linter
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.0
+          version: v2.4.0
 
       - name: Run tests
         run: go test ./...
