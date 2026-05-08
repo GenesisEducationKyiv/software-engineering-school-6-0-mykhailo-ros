@@ -175,7 +175,10 @@ func TestGetSubscriptionsHandler_Success(t *testing.T) {
 	}
 
 	var result []map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&result)
+	err := json.NewDecoder(w.Body).Decode(&result)
+	if err != nil {
+		t.Errorf("error while decoding")
+	}
 	if len(result) != 1 {
 		t.Errorf("expected 1 subscription, got %d", len(result))
 	}

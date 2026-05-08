@@ -25,7 +25,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
 	}
-	defer database.Close()
+	defer func() {
+		if err := database.Close(); err != nil {
+			log.Printf("failed to close db: %v", err)
+		}
+	}()
 
 	if err := db.RunMigrations(database); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
@@ -51,5 +55,7 @@ func main() {
 	r.Static("/swagger", "./static/swagger")
 	r.StaticFile("/swagger.yaml", "./swagger.yaml")
 
-	r.Run(":8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal(err)
+	}
 }

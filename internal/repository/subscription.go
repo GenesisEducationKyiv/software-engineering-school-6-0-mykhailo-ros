@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"log"
 )
 
 type Subscription struct {
@@ -74,7 +75,11 @@ func (r *SubscriptionRepo) FindByEmail(email string) ([]Subscription, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("failed to close db response: %v", err)
+		}
+	}()
 
 	var subs []Subscription
 	for rows.Next() {
@@ -94,7 +99,11 @@ func (r *SubscriptionRepo) FindAllConfirmed() ([]Subscription, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("failed to close db response: %v", err)
+		}
+	}()
 
 	var subs []Subscription
 	for rows.Next() {

@@ -3,6 +3,7 @@ package github
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -48,7 +49,11 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return false, nil
@@ -82,7 +87,11 @@ func (c *Client) GetLatestRelease(repo string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil
@@ -97,7 +106,10 @@ func (c *Client) GetLatestRelease(repo string) (*Release, error) {
 	}
 
 	if c.cache != nil && release.TagName != "" {
-		c.cache.Set(cacheKey, release.TagName, 10*time.Minute)
+		err = c.cache.Set(cacheKey, release.TagName, 10*time.Minute)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &release, nil
