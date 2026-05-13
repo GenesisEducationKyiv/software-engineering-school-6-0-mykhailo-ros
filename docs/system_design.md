@@ -53,8 +53,9 @@ Developers who follow multiple GitHub repositories have no reliable way to know 
 ```
 Input:  POST /api/subscribe { email, repo }
 Output: 200 OK — confirmation email sent
+        400 Bad Request — invalid input (empty fields, bad repo format, invalid email)
+        404 Not Found — repo does not exist on GitHub
         409 Conflict — already subscribed
-        422 Unprocessable — repo does not exist on GitHub
 ```
  
 **Confirm:**
@@ -204,8 +205,11 @@ Background goroutine started at app startup. Ticks every 10 minutes, iterates al
 |---|---|
 | Body | `email`, `repo` (form data) |
 | 200 | `{"message": "subscription created, check your email"}` |
+| 400 | `{"error": "email and repo are required"}` (empty fields) |
+| 400 | `{"error": "invalid repo format, use owner/repo"}` (bad format) |
+| 400 | `{"error": "invalid email"}` (invalid email format) |
+| 404 | `{"error": "repository not found on GitHub"}` |
 | 409 | `{"error": "already subscribed to this repository"}` |
-| 422 | `{"error": "repo not found"}` |
 | 429 | `{"error": "github rate limit exceeded, try again later"}` |
 | 500 | `{"error": "internal server error"}` |
  
@@ -228,6 +232,14 @@ Background goroutine started at app startup. Ticks every 10 minutes, iterates al
 | 400 | `{"error": "invalid token"}` |
 | 404 | `{"error": "token not found"}` |
 | 500 | `{"error": "internal server error"}` |
+ 
+**GET `/api/subscriptions`**
+ 
+| | |
+|---|---|
+| Params | `email` (query string) |
+| 200 | `[{"email": "...", "repo": "...", "confirmed": true, "last_seen_tag": "..."}]` |
+| 400 | `{"error": "invalid email"}` |
  
 ---
  
@@ -312,7 +324,7 @@ There is no health check endpoint, no metrics endpoint, and no panic recovery on
 |----------|----------------|
 | Subscribe with valid email + existing repo | 200, confirmation email received |
 | Subscribe with same email + repo twice | 409 Conflict |
-| Subscribe with non-existent repo | 422 Unprocessable |
+| Subscribe with non-existent repo | 404 Not Found |
 | Confirm with valid token | 200, `confirmed=true` in DB |
 | Confirm with invalid token | 404 |
 | Manually set `last_seen_tag` to old value, wait for tick | Notification email received |
