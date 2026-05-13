@@ -338,5 +338,15 @@ There is no health check endpoint, no metrics endpoint, and no panic recovery on
 - **No Redis fallback** *(known gap)*: if Redis is unavailable, GitHub API calls fail. A future improvement would fall back to live requests when the cache is unreachable.
 - **No abuse protection on `/api/subscribe`**: the endpoint is unauthenticated and triggers an outbound email. A malicious actor could use it to send unsolicited emails to arbitrary addresses. Rate limiting per IP and per target email address should be added before any public deployment.
 ---
+ 
+## 8. Related Decisions
+ 
+The architectural decisions behind this document are recorded in `docs/adr/`. The table below lists only the foundational decisions that directly shape the system architecture. The full set of ADRs covers additional domain and implementation decisions.
+ 
+| ADR | Decision |
+|-----|----------|
+| [001 — Database](adr/001-database.md) | PostgreSQL over SQLite |
+| [003 — Redis caching](adr/003-redis-caching.md) | GitHub API response cache with 10-minute TTL |
+| [005 — Polling vs webhooks](adr/005-polling-vs-webhooks.md) | Polling GitHub REST API over webhook registration |
 
  
