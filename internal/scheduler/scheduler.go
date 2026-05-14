@@ -20,7 +20,7 @@ func NewScheduler(repo *repository.SubscriptionRepo, github *github.Client, mail
 	return &Scheduler{repo: repo, github: github, mailer: mailer, interval: interval}
 }
 
-func (s *Scheduler) check() {
+func (s *Scheduler) checkAndNotify() {
 	subs, err := s.repo.FindAllConfirmed()
 	if err != nil {
 		log.Printf("scheduler: failed to fetch subscription: %v", err)
@@ -63,7 +63,7 @@ func (s *Scheduler) check() {
 func (s *Scheduler) Start() {
 	go func() {
 		for {
-			s.check()
+			s.checkAndNotify()
 			time.Sleep(s.interval)
 		}
 	}()
