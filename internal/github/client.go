@@ -32,23 +32,37 @@ type Release struct {
 	TagName string `json:"tag_name"`
 }
 
+func (c *Client) sendRequest(url string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	return c.httpClient.Do(req)
+}
+
+func checkResponseStatus(resp *http.Response) error {
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+	case http.StatusNotFound:
+		return ErrRepoNotFound
+	case http.StatusTooManyRequests:
+		return fmt.Errorf("github rate limit exceeded")
+	default:
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+}
+
 func (c *Client) RepoExists(repo string) (bool, error) {
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return false, fmt.Errorf("invalid repo format")
 	}
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s", repo)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return false, err
-	}
-
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
-	}
-
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.sendRequest(fmt.Sprintf("https://api.github.com/repos/%s", repo))
 	if err != nil {
 		return false, err
 	}
@@ -58,13 +72,13 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 		}
 	}()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return false, nil
+	if err := checkResponseStatus(resp); err != nil {
+		if errors.Is(err, ErrRepoNotFound) {
+			return false, nil
+		}
+		return false, err
 	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return false, fmt.Errorf("github rate limit exceeded")
-	}
-	return resp.StatusCode == http.StatusOK, nil
+	return true, nil
 }
 
 func (c *Client) GetLatestRelease(repo string) (*Release, error) {
@@ -76,17 +90,7 @@ func (c *Client) GetLatestRelease(repo string) (*Release, error) {
 		}
 	}
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
-	}
-
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.sendRequest(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo))
 	if err != nil {
 		return nil, err
 	}
@@ -96,11 +100,8 @@ func (c *Client) GetLatestRelease(repo string) (*Release, error) {
 		}
 	}()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, ErrRepoNotFound
-	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, fmt.Errorf("github rate limit exceeded")
+	if err := checkResponseStatus(resp); err != nil {
+		return nil, err
 	}
 
 	var release Release
