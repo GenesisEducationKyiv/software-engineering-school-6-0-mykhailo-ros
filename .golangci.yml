@@ -1,0 +1,16 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - durationcheck
+    - misspell
+    - nilnil
+    - unconvert
+    - revive
+  settings:
+    revive:
+      enable-all-rules: false
+      rules:
+        - name: receiver-naming
+          severity: warning
+          disabled: false
