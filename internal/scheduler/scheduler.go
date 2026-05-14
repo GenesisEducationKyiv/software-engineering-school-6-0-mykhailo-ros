@@ -84,11 +84,19 @@ func (s *Scheduler) Start(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	go func() {
 		defer ticker.Stop()
-		s.job.Run()
+		safeRun := func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("scheduler: panic in job: %v", r)
+				}
+			}()
+			s.job.Run()
+		}
+		safeRun()
 		for {
 			select {
 			case <-ticker.C:
-				s.job.Run()
+				safeRun()
 			case <-ctx.Done():
 				return
 			}
