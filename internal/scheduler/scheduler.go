@@ -20,21 +20,24 @@ type NotificationSender interface {
 	SendReleaseNotification(to, repo, tag string) error
 }
 
-type Scheduler struct {
-	repo     NotificationStore
-	github   ReleaseChecker
-	mailer   NotificationSender
-	interval time.Duration
+type NotificationJob interface {
+	Run()
 }
 
-func NewScheduler(repo NotificationStore, github ReleaseChecker, mailer NotificationSender, interval time.Duration) *Scheduler {
-	return &Scheduler{repo: repo, github: github, mailer: mailer, interval: interval}
+type Notifier struct {
+	repo   NotificationStore
+	github ReleaseChecker
+	mailer NotificationSender
 }
 
-func (s *Scheduler) checkAndNotify() {
-	subs, err := s.repo.FindAllConfirmed()
+func NewNotifier(repo NotificationStore, github ReleaseChecker, mailer NotificationSender) *Notifier {
+	return &Notifier{repo: repo, github: github, mailer: mailer}
+}
+
+func (n *Notifier) Run() {
+	subs, err := n.repo.FindAllConfirmed()
 	if err != nil {
-		log.Printf("scheduler: failed to fetch subscription: %v", err)
+		log.Printf("scheduler: failed to fetch subscriptions: %v", err)
 		return
 	}
 
@@ -43,7 +46,7 @@ func (s *Scheduler) checkAndNotify() {
 	for _, sub := range subs {
 		tag, ok := seen[sub.Repo]
 		if !ok {
-			release, err := s.github.GetLatestRelease(sub.Repo)
+			release, err := n.github.GetLatestRelease(sub.Repo)
 			if err != nil {
 				log.Printf("scheduler: failed to get release for %s: %v", sub.Repo, err)
 				continue
@@ -56,22 +59,43 @@ func (s *Scheduler) checkAndNotify() {
 			continue
 		}
 
-		if err := s.mailer.SendReleaseNotification(sub.Email, sub.Repo, tag); err != nil {
+		if err := n.mailer.SendReleaseNotification(sub.Email, sub.Repo, tag); err != nil {
 			log.Printf("scheduler: failed to send email to %s: %v", sub.Email, err)
 			continue
 		}
 
-		if err := s.repo.UpdateLastSeenTag(sub.ID, tag); err != nil {
+		if err := n.repo.UpdateLastSeenTag(sub.ID, tag); err != nil {
 			log.Printf("scheduler: failed to update last_seen_tag for %s: %v", sub.Email, err)
 		}
 	}
 }
 
+type Scheduler struct {
+	job      NotificationJob
+	interval time.Duration
+	done     chan struct{}
+}
+
+func NewScheduler(job NotificationJob, interval time.Duration) *Scheduler {
+	return &Scheduler{job: job, interval: interval}
+}
+
 func (s *Scheduler) Start() {
+	s.done = make(chan struct{})
+	ticker := time.NewTicker(s.interval)
 	go func() {
+		defer ticker.Stop()
 		for {
-			s.checkAndNotify()
-			time.Sleep(s.interval)
+			select {
+			case <-ticker.C:
+				s.job.Run()
+			case <-s.done:
+				return
+			}
 		}
 	}()
+}
+
+func (s *Scheduler) Stop() {
+	close(s.done)
 }

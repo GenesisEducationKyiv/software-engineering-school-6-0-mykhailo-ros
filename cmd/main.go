@@ -44,8 +44,9 @@ func main() {
 
 	svc := service.NewSubscription(repo, githubClient, mailerClient)
 	h := handler.NewSubscriptionHandler(svc)
-	scheduler := scheduler.NewScheduler(repo, githubClient, mailerClient, 10*time.Minute)
-	scheduler.Start()
+	notifier := scheduler.NewNotifier(repo, githubClient, mailerClient)
+	sched := scheduler.NewScheduler(notifier, 10*time.Minute)
+	sched.Start()
 
 	r := gin.Default()
 	r.POST("/api/subscribe", h.Subscribe)
