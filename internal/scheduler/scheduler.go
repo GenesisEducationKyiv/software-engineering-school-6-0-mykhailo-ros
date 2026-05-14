@@ -85,6 +85,7 @@ func (s *Scheduler) Start() {
 	ticker := time.NewTicker(s.interval)
 	go func() {
 		defer ticker.Stop()
+		s.job.Run()
 		for {
 			select {
 			case <-ticker.C:
