@@ -45,10 +45,16 @@ func (m *mockRepo) Create(email, repo, confirmToken, unsubscribeToken string) er
 }
 
 func (m *mockRepo) FindByConfirmToken(token string) (*repository.Subscription, error) {
+	if m.subscription == nil {
+		return nil, repository.ErrNotFound
+	}
 	return m.subscription, nil
 }
 
 func (m *mockRepo) FindByUnsubscribeToken(token string) (*repository.Subscription, error) {
+	if m.subscription == nil {
+		return nil, repository.ErrNotFound
+	}
 	return m.subscription, nil
 }
 

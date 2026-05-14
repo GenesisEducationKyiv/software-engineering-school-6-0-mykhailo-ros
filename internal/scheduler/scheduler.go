@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"errors"
 	"github-release-notifier/internal/github"
 	"github-release-notifier/internal/mailer"
 	"github-release-notifier/internal/repository"
@@ -32,12 +33,12 @@ func (s *Scheduler) check() {
 		tag, ok := seen[sub.Repo]
 		if !ok {
 			release, err := s.github.GetLatestRelease(sub.Repo)
-			if err != nil {
-				log.Printf("scheduler: failed to get release for %s: %v", sub.Repo, err)
+			if errors.Is(err, github.ErrRepoNotFound) {
+				seen[sub.Repo] = ""
 				continue
 			}
-			if release == nil {
-				seen[sub.Repo] = ""
+			if err != nil {
+				log.Printf("scheduler: failed to get release for %s: %v", sub.Repo, err)
 				continue
 			}
 			tag = release.TagName

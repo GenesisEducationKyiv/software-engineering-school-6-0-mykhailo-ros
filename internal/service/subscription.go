@@ -3,6 +3,7 @@ package service
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github-release-notifier/internal/repository"
 	"os"
@@ -75,23 +76,21 @@ func (s *Subscription) Subscribe(email, repo string) error {
 }
 
 func (s *Subscription) Confirm(token string) error {
-	sub, err := s.repo.FindByConfirmToken(token)
-	if err != nil {
+	if _, err := s.repo.FindByConfirmToken(token); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return fmt.Errorf("token not found")
+		}
 		return err
-	}
-	if sub == nil {
-		return fmt.Errorf("token not found")
 	}
 	return s.repo.Confirm(token)
 }
 
 func (s *Subscription) Unsubscribe(token string) error {
-	sub, err := s.repo.FindByUnsubscribeToken(token)
-	if err != nil {
+	if _, err := s.repo.FindByUnsubscribeToken(token); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return fmt.Errorf("token not found")
+		}
 		return err
-	}
-	if sub == nil {
-		return fmt.Errorf("token not found")
 	}
 	return s.repo.DeleteByUnsubscribeToken(token)
 }

@@ -2,6 +2,7 @@ package github
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 
 	"github-release-notifier/internal/cache"
 )
+
+var ErrRepoNotFound = errors.New("repository not found")
 
 type Client struct {
 	httpClient *http.Client
@@ -94,7 +97,7 @@ func (c *Client) GetLatestRelease(repo string) (*Release, error) {
 	}()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+		return nil, ErrRepoNotFound
 	}
 	if resp.StatusCode == http.StatusTooManyRequests {
 		return nil, fmt.Errorf("github rate limit exceeded")

@@ -2,8 +2,11 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type Subscription struct {
 	ID               int
@@ -38,8 +41,8 @@ func (r *SubscriptionRepo) FindByConfirmToken(token string) (*Subscription, erro
 		SELECT id, email, repo, confirmed, confirm_token, unsubscribe_token, last_seen_tag
 		FROM subscriptions WHERE confirm_token = $1`, token).
 		Scan(&s.ID, &s.Email, &s.Repo, &s.Confirmed, &s.ConfirmToken, &s.UnsubscribeToken, &s.LastSeenTag)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
 	}
 	return s, err
 }
@@ -50,8 +53,8 @@ func (r *SubscriptionRepo) FindByUnsubscribeToken(token string) (*Subscription, 
 		SELECT id, email, repo, confirmed, confirm_token, unsubscribe_token, last_seen_tag
 		FROM subscriptions WHERE unsubscribe_token = $1`, token).
 		Scan(&s.ID, &s.Email, &s.Repo, &s.Confirmed, &s.ConfirmToken, &s.UnsubscribeToken, &s.LastSeenTag)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
 	}
 	return s, err
 }
