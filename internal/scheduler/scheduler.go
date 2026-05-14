@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"github-release-notifier/internal/domain"
 	"github-release-notifier/internal/repository"
 	"log"
@@ -73,15 +74,13 @@ func (n *Notifier) Run() {
 type Scheduler struct {
 	job      NotificationJob
 	interval time.Duration
-	done     chan struct{}
 }
 
 func NewScheduler(job NotificationJob, interval time.Duration) *Scheduler {
 	return &Scheduler{job: job, interval: interval}
 }
 
-func (s *Scheduler) Start() {
-	s.done = make(chan struct{})
+func (s *Scheduler) Start(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	go func() {
 		defer ticker.Stop()
@@ -90,13 +89,9 @@ func (s *Scheduler) Start() {
 			select {
 			case <-ticker.C:
 				s.job.Run()
-			case <-s.done:
+			case <-ctx.Done():
 				return
 			}
 		}
 	}()
-}
-
-func (s *Scheduler) Stop() {
-	close(s.done)
 }

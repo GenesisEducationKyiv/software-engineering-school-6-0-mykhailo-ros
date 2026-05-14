@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github-release-notifier/internal/cache"
 	"github-release-notifier/internal/db"
 	"github-release-notifier/internal/github"
@@ -11,6 +12,8 @@ import (
 	"github-release-notifier/internal/service"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -44,9 +47,12 @@ func main() {
 
 	svc := service.NewSubscription(repo, githubClient, mailerClient)
 	h := handler.NewSubscriptionHandler(svc)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	notifier := scheduler.NewNotifier(repo, githubClient, mailerClient)
 	sched := scheduler.NewScheduler(notifier, 10*time.Minute)
-	sched.Start()
+	sched.Start(ctx)
 
 	r := gin.Default()
 	r.POST("/api/subscribe", h.Subscribe)
