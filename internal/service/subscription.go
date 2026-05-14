@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github-release-notifier/internal/domain"
 	"github-release-notifier/internal/repository"
 	"os"
 )
@@ -77,7 +78,7 @@ func (s *Subscription) Subscribe(email, repo string) error {
 
 func (s *Subscription) Confirm(token string) error {
 	if _, err := s.repo.FindByConfirmToken(token); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return fmt.Errorf("token not found")
 		}
 		return err
@@ -87,7 +88,7 @@ func (s *Subscription) Confirm(token string) error {
 
 func (s *Subscription) Unsubscribe(token string) error {
 	if _, err := s.repo.FindByUnsubscribeToken(token); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return fmt.Errorf("token not found")
 		}
 		return err

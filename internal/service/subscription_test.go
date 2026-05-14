@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github-release-notifier/internal/domain"
 	"github-release-notifier/internal/repository"
 )
 
@@ -46,14 +47,14 @@ func (m *mockRepo) Create(email, repo, confirmToken, unsubscribeToken string) er
 
 func (m *mockRepo) FindByConfirmToken(token string) (*repository.Subscription, error) {
 	if m.subscription == nil {
-		return nil, repository.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return m.subscription, nil
 }
 
 func (m *mockRepo) FindByUnsubscribeToken(token string) (*repository.Subscription, error) {
 	if m.subscription == nil {
-		return nil, repository.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return m.subscription, nil
 }

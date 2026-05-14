@@ -1,9 +1,7 @@
 package scheduler
 
 import (
-	"errors"
-	"github-release-notifier/internal/github"
-	"github-release-notifier/internal/mailer"
+	"github-release-notifier/internal/domain"
 	"github-release-notifier/internal/repository"
 	"log"
 	"time"
@@ -14,14 +12,22 @@ type NotificationStore interface {
 	UpdateLastSeenTag(id int, tag string) error
 }
 
+type ReleaseChecker interface {
+	GetLatestRelease(repo string) (*domain.Release, error)
+}
+
+type NotificationSender interface {
+	SendReleaseNotification(to, repo, tag string) error
+}
+
 type Scheduler struct {
 	repo     NotificationStore
-	github   *github.Client
-	mailer   *mailer.Mailer
+	github   ReleaseChecker
+	mailer   NotificationSender
 	interval time.Duration
 }
 
-func NewScheduler(repo NotificationStore, github *github.Client, mailer *mailer.Mailer, interval time.Duration) *Scheduler {
+func NewScheduler(repo NotificationStore, github ReleaseChecker, mailer NotificationSender, interval time.Duration) *Scheduler {
 	return &Scheduler{repo: repo, github: github, mailer: mailer, interval: interval}
 }
 
@@ -38,10 +44,6 @@ func (s *Scheduler) checkAndNotify() {
 		tag, ok := seen[sub.Repo]
 		if !ok {
 			release, err := s.github.GetLatestRelease(sub.Repo)
-			if errors.Is(err, github.ErrRepoNotFound) {
-				seen[sub.Repo] = ""
-				continue
-			}
 			if err != nil {
 				log.Printf("scheduler: failed to get release for %s: %v", sub.Repo, err)
 				continue
