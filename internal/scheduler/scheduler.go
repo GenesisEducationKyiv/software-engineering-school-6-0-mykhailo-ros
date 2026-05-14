@@ -9,14 +9,19 @@ import (
 	"time"
 )
 
+type NotificationStore interface {
+	FindAllConfirmed() ([]repository.Subscription, error)
+	UpdateLastSeenTag(id int, tag string) error
+}
+
 type Scheduler struct {
-	repo     *repository.SubscriptionRepo
+	repo     NotificationStore
 	github   *github.Client
 	mailer   *mailer.Mailer
 	interval time.Duration
 }
 
-func NewScheduler(repo *repository.SubscriptionRepo, github *github.Client, mailer *mailer.Mailer, interval time.Duration) *Scheduler {
+func NewScheduler(repo NotificationStore, github *github.Client, mailer *mailer.Mailer, interval time.Duration) *Scheduler {
 	return &Scheduler{repo: repo, github: github, mailer: mailer, interval: interval}
 }
 
