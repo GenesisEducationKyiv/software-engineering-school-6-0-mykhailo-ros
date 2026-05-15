@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github-release-notifier/internal/domain"
-	"github-release-notifier/internal/repository"
 	"os"
 )
 
@@ -21,12 +20,12 @@ type Mailer interface {
 
 type SubscriptionRepository interface {
 	Create(email, repo, confirmToken, unsubscribeToken string) error
-	FindByConfirmToken(token string) (*repository.Subscription, error)
-	FindByUnsubscribeToken(token string) (*repository.Subscription, error)
+	FindByConfirmToken(token string) (*domain.Subscription, error)
+	FindByUnsubscribeToken(token string) (*domain.Subscription, error)
 	Confirm(token string) error
 	DeleteByUnsubscribeToken(token string) error
-	FindByEmail(email string) ([]repository.Subscription, error)
-	FindAllConfirmed() ([]repository.Subscription, error)
+	FindByEmail(email string) ([]domain.Subscription, error)
+	FindAllConfirmed() ([]domain.Subscription, error)
 	UpdateLastSeenTag(id int, tag string) error
 }
 
@@ -96,6 +95,6 @@ func (s *Subscription) Unsubscribe(token string) error {
 	return s.repo.DeleteByUnsubscribeToken(token)
 }
 
-func (s *Subscription) GetSubscriptions(email string) ([]repository.Subscription, error) {
+func (s *Subscription) GetSubscriptions(email string) ([]domain.Subscription, error) {
 	return s.repo.FindByEmail(email)
 }

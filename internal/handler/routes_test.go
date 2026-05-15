@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github-release-notifier/internal/repository"
+	"github-release-notifier/internal/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +18,7 @@ type mockService struct {
 	subscribeErr   error
 	confirmErr     error
 	unsubscribeErr error
-	subscriptions  []repository.Subscription
+	subscriptions  []domain.Subscription
 }
 
 func (m *mockService) Subscribe(email, repo string) error {
@@ -33,7 +33,7 @@ func (m *mockService) Unsubscribe(token string) error {
 	return m.unsubscribeErr
 }
 
-func (m *mockService) GetSubscriptions(email string) ([]repository.Subscription, error) {
+func (m *mockService) GetSubscriptions(email string) ([]domain.Subscription, error) {
 	return m.subscriptions, nil
 }
 
@@ -162,7 +162,7 @@ func TestConfirmHandler_TokenNotFound(t *testing.T) {
 }
 
 func TestGetSubscriptionsHandler_Success(t *testing.T) {
-	subs := []repository.Subscription{{Email: "test@test.com", Repo: "golang/go", Confirmed: true}}
+	subs := []domain.Subscription{{Email: "test@test.com", Repo: "golang/go", Confirmed: true}}
 	r := setupRouter(&mockService{subscriptions: subs})
 
 	req := httptest.NewRequest("GET", "/api/subscriptions?email=test@test.com", nil)

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github-release-notifier/internal/domain"
-	"github-release-notifier/internal/repository"
 )
 
 type mockGithub struct {
@@ -34,8 +33,8 @@ func (m *mockMailer) SendReleaseNotification(to, repo, tag string) error {
 }
 
 type mockRepo struct {
-	subscription  *repository.Subscription
-	subscriptions []repository.Subscription
+	subscription  *domain.Subscription
+	subscriptions []domain.Subscription
 	createErr     error
 	confirmErr    error
 	deleteErr     error
@@ -45,14 +44,14 @@ func (m *mockRepo) Create(email, repo, confirmToken, unsubscribeToken string) er
 	return m.createErr
 }
 
-func (m *mockRepo) FindByConfirmToken(token string) (*repository.Subscription, error) {
+func (m *mockRepo) FindByConfirmToken(token string) (*domain.Subscription, error) {
 	if m.subscription == nil {
 		return nil, domain.ErrNotFound
 	}
 	return m.subscription, nil
 }
 
-func (m *mockRepo) FindByUnsubscribeToken(token string) (*repository.Subscription, error) {
+func (m *mockRepo) FindByUnsubscribeToken(token string) (*domain.Subscription, error) {
 	if m.subscription == nil {
 		return nil, domain.ErrNotFound
 	}
@@ -67,11 +66,11 @@ func (m *mockRepo) DeleteByUnsubscribeToken(token string) error {
 	return m.deleteErr
 }
 
-func (m *mockRepo) FindByEmail(email string) ([]repository.Subscription, error) {
+func (m *mockRepo) FindByEmail(email string) ([]domain.Subscription, error) {
 	return m.subscriptions, nil
 }
 
-func (m *mockRepo) FindAllConfirmed() ([]repository.Subscription, error) {
+func (m *mockRepo) FindAllConfirmed() ([]domain.Subscription, error) {
 	return m.subscriptions, nil
 }
 
@@ -119,7 +118,7 @@ func TestSubscribe_GithubError(t *testing.T) {
 
 func TestConfirm_Success(t *testing.T) {
 	svc := NewSubscription(
-		&mockRepo{subscription: &repository.Subscription{ID: 1}},
+		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
 		&mockMailer{},
 	)
@@ -144,7 +143,7 @@ func TestConfirm_TokenNotFound(t *testing.T) {
 
 func TestUnsubscribe_Success(t *testing.T) {
 	svc := NewSubscription(
-		&mockRepo{subscription: &repository.Subscription{ID: 1}},
+		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
 		&mockMailer{},
 	)

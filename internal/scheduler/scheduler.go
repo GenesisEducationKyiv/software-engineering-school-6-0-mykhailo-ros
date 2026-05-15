@@ -3,13 +3,12 @@ package scheduler
 import (
 	"context"
 	"github-release-notifier/internal/domain"
-	"github-release-notifier/internal/repository"
 	"log"
 	"time"
 )
 
 type NotificationStore interface {
-	FindAllConfirmed() ([]repository.Subscription, error)
+	FindAllConfirmed() ([]domain.Subscription, error)
 	UpdateLastSeenTag(id int, tag string) error
 }
 

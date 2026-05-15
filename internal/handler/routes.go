@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github-release-notifier/internal/repository"
+	"github-release-notifier/internal/domain"
 	"net/http"
 	"regexp"
 	"strings"
@@ -15,7 +15,7 @@ type SubscriptionService interface {
 	Subscribe(email, repo string) error
 	Confirm(token string) error
 	Unsubscribe(token string) error
-	GetSubscriptions(email string) ([]repository.Subscription, error)
+	GetSubscriptions(email string) ([]domain.Subscription, error)
 }
 
 type SubscriptionHandler struct {
