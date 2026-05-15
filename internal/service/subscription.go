@@ -14,7 +14,6 @@ type GithubClient interface {
 
 type Mailer interface {
 	SendConfirmation(to, repo, confirmURL string) error
-	SendReleaseNotification(to, repo, tag string) error
 }
 
 type SubscriptionRepository interface {

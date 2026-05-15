@@ -17,18 +17,12 @@ func (m *mockGithub) RepoExists(repo string) (bool, error) {
 }
 
 type mockMailer struct {
-	confirmCalled      bool
-	notificationCalled bool
-	err                error
+	confirmCalled bool
+	err           error
 }
 
 func (m *mockMailer) SendConfirmation(to, repo, confirmURL string) error {
 	m.confirmCalled = true
-	return m.err
-}
-
-func (m *mockMailer) SendReleaseNotification(to, repo, tag string) error {
-	m.notificationCalled = true
 	return m.err
 }
 
