@@ -9,19 +9,23 @@ import (
 	"strings"
 	"time"
 
-	"github-release-notifier/internal/cache"
 	"github-release-notifier/internal/domain"
 )
+
+type Cache interface {
+	Get(key string) (string, error)
+	Set(key, value string, ttl time.Duration) error
+}
 
 var errLatestReleaseNotFound = errors.New("latest release not found")
 
 type Client struct {
 	httpClient *http.Client
 	token      string
-	cache      *cache.Cache
+	cache      Cache
 }
 
-func NewClient(token string, cache *cache.Cache) *Client {
+func NewClient(token string, cache Cache) *Client {
 	return &Client{
 		httpClient: &http.Client{},
 		token:      token,
