@@ -3,7 +3,6 @@ package mailer
 import (
 	"fmt"
 	"net/smtp"
-	"os"
 )
 
 type Mailer struct {
@@ -14,14 +13,8 @@ type Mailer struct {
 	from     string
 }
 
-func NewMailer() *Mailer {
-	return &Mailer{
-		host:     os.Getenv("SMTP_HOST"),
-		port:     os.Getenv("SMTP_PORT"),
-		username: os.Getenv("SMTP_USERNAME"),
-		password: os.Getenv("SMTP_PASSWORD"),
-		from:     os.Getenv("SMTP_FROM"),
-	}
+func NewMailer(host, port, username, password, from string) *Mailer {
+	return &Mailer{host: host, port: port, username: username, password: password, from: from}
 }
 
 func (m *Mailer) send(to, subject, body string) error {

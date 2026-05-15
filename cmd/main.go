@@ -24,7 +24,13 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file, using environment variables")
 	}
-	database, err := db.Connect()
+	database, err := db.Connect(
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
 	}
@@ -43,7 +49,13 @@ func main() {
 	repo := repository.NewSubscriptionRepo(database)
 	cacheClient := cache.NewCache()
 	githubClient := github.NewClient(os.Getenv("GITHUB_TOKEN"), cacheClient)
-	mailerClient := mailer.NewMailer()
+	mailerClient := mailer.NewMailer(
+		os.Getenv("SMTP_HOST"),
+		os.Getenv("SMTP_PORT"),
+		os.Getenv("SMTP_USERNAME"),
+		os.Getenv("SMTP_PASSWORD"),
+		os.Getenv("SMTP_FROM"),
+	)
 
 	svc := service.NewSubscription(repo, githubClient, mailerClient, os.Getenv("BASE_URL"))
 	h := handler.NewSubscriptionHandler(svc)
