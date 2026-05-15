@@ -70,6 +70,7 @@ func TestSubscribe_Success(t *testing.T) {
 		&mockRepo{},
 		&mockGithub{exists: true},
 		&mockMailer{},
+		"",
 	)
 
 	if err := svc.Subscribe("test@test.com", "golang/go"); err != nil {
@@ -82,6 +83,7 @@ func TestSubscribe_RepoNotFound(t *testing.T) {
 		&mockRepo{},
 		&mockGithub{exists: false},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Subscribe("test@test.com", "golang/go")
@@ -95,6 +97,7 @@ func TestSubscribe_GithubError(t *testing.T) {
 		&mockRepo{},
 		&mockGithub{err: fmt.Errorf("rate limit exceeded")},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Subscribe("test@test.com", "golang/go")
@@ -108,6 +111,7 @@ func TestConfirm_Success(t *testing.T) {
 		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	if err := svc.Confirm("valid-token"); err != nil {
@@ -120,6 +124,7 @@ func TestConfirm_TokenNotFound(t *testing.T) {
 		&mockRepo{subscription: nil},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Confirm("invalid-token")
@@ -133,6 +138,7 @@ func TestUnsubscribe_Success(t *testing.T) {
 		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	if err := svc.Unsubscribe("valid-token"); err != nil {
@@ -145,6 +151,7 @@ func TestUnsubscribe_TokenNotFound(t *testing.T) {
 		&mockRepo{subscription: nil},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Unsubscribe("invalid-token")

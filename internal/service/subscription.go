@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github-release-notifier/internal/domain"
-	"os"
 )
 
 type GithubClient interface {
@@ -26,13 +25,14 @@ type SubscriptionRepository interface {
 }
 
 type Subscription struct {
-	repo   SubscriptionRepository
-	github GithubClient
-	mailer Mailer
+	repo    SubscriptionRepository
+	github  GithubClient
+	mailer  Mailer
+	baseURL string
 }
 
-func NewSubscription(repo SubscriptionRepository, github GithubClient, mailer Mailer) *Subscription {
-	return &Subscription{repo: repo, github: github, mailer: mailer}
+func NewSubscription(repo SubscriptionRepository, github GithubClient, mailer Mailer, baseURL string) *Subscription {
+	return &Subscription{repo: repo, github: github, mailer: mailer, baseURL: baseURL}
 }
 
 func generateToken() (string, error) {
@@ -66,8 +66,7 @@ func (s *Subscription) Subscribe(email, repo string) error {
 		return err
 	}
 
-	baseURL := os.Getenv("BASE_URL")
-	confirmURL := fmt.Sprintf("%s/api/confirm/%s", baseURL, confirmToken)
+	confirmURL := fmt.Sprintf("%s/api/confirm/%s", s.baseURL, confirmToken)
 	return s.mailer.SendConfirmation(email, repo, confirmURL)
 }
 

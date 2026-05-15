@@ -45,7 +45,7 @@ func main() {
 	githubClient := github.NewClient(os.Getenv("GITHUB_TOKEN"), cacheClient)
 	mailerClient := mailer.NewMailer()
 
-	svc := service.NewSubscription(repo, githubClient, mailerClient)
+	svc := service.NewSubscription(repo, githubClient, mailerClient, os.Getenv("BASE_URL"))
 	h := handler.NewSubscriptionHandler(svc)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
