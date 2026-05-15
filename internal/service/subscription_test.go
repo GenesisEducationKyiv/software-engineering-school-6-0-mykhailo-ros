@@ -70,13 +70,6 @@ func (m *mockRepo) FindByEmail(email string) ([]domain.Subscription, error) {
 	return m.subscriptions, nil
 }
 
-func (m *mockRepo) FindAllConfirmed() ([]domain.Subscription, error) {
-	return m.subscriptions, nil
-}
-
-func (m *mockRepo) UpdateLastSeenTag(id int, tag string) error {
-	return nil
-}
 
 func TestSubscribe_Success(t *testing.T) {
 	svc := NewSubscription(

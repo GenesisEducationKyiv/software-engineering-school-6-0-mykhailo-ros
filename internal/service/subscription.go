@@ -24,8 +24,6 @@ type SubscriptionRepository interface {
 	Confirm(token string) error
 	DeleteByUnsubscribeToken(token string) error
 	FindByEmail(email string) ([]domain.Subscription, error)
-	FindAllConfirmed() ([]domain.Subscription, error)
-	UpdateLastSeenTag(id int, tag string) error
 }
 
 type Subscription struct {
