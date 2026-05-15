@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github-release-notifier/internal/domain"
+	"github.com/lib/pq"
 )
 
 type SubscriptionRepo struct {
@@ -22,6 +23,10 @@ func (r *SubscriptionRepo) Create(email, repo, confirmToken, unsubscribeToken st
 		VALUES ($1, $2, $3, $4)`,
 		email, repo, confirmToken, unsubscribeToken,
 	)
+	var pgErr *pq.Error
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return domain.ErrAlreadySubscribed
+	}
 	return err
 }
 

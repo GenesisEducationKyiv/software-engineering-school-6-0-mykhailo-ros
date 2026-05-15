@@ -47,7 +47,7 @@ func checkResponseStatus(resp *http.Response) error {
 	case http.StatusNotFound:
 		return errLatestReleaseNotFound
 	case http.StatusTooManyRequests:
-		return fmt.Errorf("github rate limit exceeded")
+		return domain.ErrRateLimited
 	default:
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}

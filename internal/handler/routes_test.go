@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -103,7 +102,7 @@ func TestSubscribeHandler_InvalidRepo(t *testing.T) {
 }
 
 func TestSubscribeHandler_RepoNotFound(t *testing.T) {
-	r := setupRouter(&mockService{subscribeErr: fmt.Errorf("repo not found")})
+	r := setupRouter(&mockService{subscribeErr: domain.ErrRepoNotFound})
 
 	form := url.Values{}
 	form.Set("email", "test@test.com")
@@ -148,7 +147,7 @@ func TestConfirmHandler_InvalidToken(t *testing.T) {
 }
 
 func TestConfirmHandler_TokenNotFound(t *testing.T) {
-	r := setupRouter(&mockService{confirmErr: fmt.Errorf("token not found")})
+	r := setupRouter(&mockService{confirmErr: domain.ErrNotFound})
 	token := strings.Repeat("a", 32)
 
 	req := httptest.NewRequest("GET", "/api/confirm/"+token, nil)

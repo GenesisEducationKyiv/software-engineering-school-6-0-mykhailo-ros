@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"github-release-notifier/internal/domain"
 	"net/http"
 	"regexp"
@@ -63,15 +64,15 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "subscription created, check your email"})
 		return
 	}
-	if strings.Contains(err.Error(), "repo not found") {
+	if errors.Is(err, domain.ErrRepoNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found on GitHub"})
 		return
 	}
-	if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+	if errors.Is(err, domain.ErrAlreadySubscribed) {
 		c.JSON(http.StatusConflict, gin.H{"error": "already subscribed to this repository"})
 		return
 	}
-	if strings.Contains(err.Error(), "rate limit") {
+	if errors.Is(err, domain.ErrRateLimited) {
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "github rate limit exceeded, try again later"})
 		return
 	}
@@ -91,7 +92,7 @@ func (h *SubscriptionHandler) Confirm(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "subscription confirmed"})
 		return
 	}
-	if strings.Contains(err.Error(), "token not found") {
+	if errors.Is(err, domain.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 		return
 	}
@@ -111,7 +112,7 @@ func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "unsubscribed successfully"})
 		return
 	}
-	if strings.Contains(err.Error(), "token not found") {
+	if errors.Is(err, domain.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "invalid token"})
 		return
 	}
