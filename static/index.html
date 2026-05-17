@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Release Notifier</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f6f8fa;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    main {
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; color: #1f2328; }
+    p  { font-size: 0.875rem; color: #636c76; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; color: #1f2328; margin-bottom: 0.25rem; }
+    input {
+      display: block;
+      width: 100%;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      outline: none;
+      margin-bottom: 1rem;
+    }
+    input:focus { border-color: #0969da; box-shadow: 0 0 0 3px rgba(9,105,218,.15); }
+    button {
+      width: 100%;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #fff;
+      background: #1f883d;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background: #196c2e; }
+    button:disabled { opacity: .6; cursor: default; }
+    #message {
+      margin-top: 1rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      display: none;
+    }
+    #message.success { background: #dafbe1; color: #116329; border: 1px solid #a7f3c8; display: block; }
+    #message.error   { background: #ffebe9; color: #82071e; border: 1px solid #ffc1ba; display: block; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>GitHub Release Notifier</h1>
+  <p>Get an email whenever a GitHub repository publishes a new release.</p>
+  <form id="subscribe-form" novalidate>
+    <label for="email">Email address</label>
+    <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email">
+    <label for="repo">Repository</label>
+    <input type="text" id="repo" name="repo" placeholder="owner/repo">
+    <button type="submit" id="submit-btn">Subscribe</button>
+  </form>
+  <div id="message" role="alert"></div>
+</main>
+<script>
+  document.getElementById('subscribe-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var email = document.getElementById('email').value.trim();
+    var repo  = document.getElementById('repo').value.trim();
+    var msgEl = document.getElementById('message');
+    var btn   = document.getElementById('submit-btn');
+
+    msgEl.className = '';
+    msgEl.textContent = '';
+
+    btn.disabled = true;
+    try {
+      var res  = await fetch('/api/subscribe', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email, repo: repo }),
+      });
+      var data = await res.json();
+      if (res.ok) {
+        msgEl.className = 'success';
+        msgEl.textContent = data.message;
+      } else {
+        msgEl.className = 'error';
+        msgEl.textContent = data.error;
+      }
+    } catch (_) {
+      msgEl.className = 'error';
+      msgEl.textContent = 'Network error, please try again.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

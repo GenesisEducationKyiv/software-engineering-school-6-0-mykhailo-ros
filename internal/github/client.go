@@ -23,6 +23,7 @@ type Client struct {
 	httpClient *http.Client
 	token      string
 	cache      Cache
+	apiBase    string
 }
 
 func NewClient(token string, cache Cache) *Client {
@@ -30,6 +31,17 @@ func NewClient(token string, cache Cache) *Client {
 		httpClient: &http.Client{},
 		token:      token,
 		cache:      cache,
+		apiBase:    "https://api.github.com",
+	}
+}
+
+// NewTestClient creates a Client that points at a custom base URL, for use in tests only.
+func NewTestClient(token, apiBase string, cache Cache) *Client {
+	return &Client{
+		httpClient: &http.Client{},
+		token:      token,
+		cache:      cache,
+		apiBase:    apiBase,
 	}
 }
 
@@ -63,7 +75,7 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 		return false, fmt.Errorf("invalid repo format")
 	}
 
-	resp, err := c.sendRequest(fmt.Sprintf("https://api.github.com/repos/%s", repo))
+	resp, err := c.sendRequest(fmt.Sprintf("%s/repos/%s", c.apiBase, repo))
 	if err != nil {
 		return false, err
 	}
@@ -91,7 +103,7 @@ func (c *Client) GetLatestRelease(repo string) (*domain.Release, error) {
 		}
 	}
 
-	resp, err := c.sendRequest(fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo))
+	resp, err := c.sendRequest(fmt.Sprintf("%s/repos/%s/releases/latest", c.apiBase, repo))
 	if err != nil {
 		return nil, err
 	}
