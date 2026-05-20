@@ -137,7 +137,7 @@ func TestGetLatestRelease_CacheMiss_Success(t *testing.T) {
 
 	client := stubbedClientWithCache(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"tag_name": "v1.2.3"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"tag_name": "v1.2.3"})
 	}), cache)
 
 	release, err := client.GetLatestRelease("owner/repo")
@@ -168,7 +168,7 @@ func TestGetLatestRelease_EmptyTagNotCached(t *testing.T) {
 
 	client := stubbedClientWithCache(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"tag_name": ""})
+		_ = json.NewEncoder(w).Encode(map[string]string{"tag_name": ""})
 	}), cache)
 
 	_, err := client.GetLatestRelease("owner/repo")
@@ -177,13 +177,12 @@ func TestGetLatestRelease_EmptyTagNotCached(t *testing.T) {
 }
 
 func TestGetLatestRelease_NilCache(t *testing.T) {
-	client := github.NewTestClient("", "", nil)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"tag_name": "v9.0.0"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"tag_name": "v9.0.0"})
 	}))
 	t.Cleanup(srv.Close)
-	client = github.NewTestClient("", srv.URL, nil)
+	client := github.NewTestClient("", srv.URL, nil)
 
 	release, err := client.GetLatestRelease("owner/repo")
 	require.NoError(t, err)
