@@ -13,45 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create .env from example
-        run: cp .env.example .env
-
-      - name: Start application stack
-        run: docker-compose up -d --build
-
-      - name: Wait for app to be ready
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8080/ > /dev/null 2>&1; then
-              echo "App is ready after ${i}s"
-              break
-            fi
-            if [ "$i" -eq 30 ]; then
-              echo "Timed out waiting for app"
-              docker-compose logs app
-              exit 1
-            fi
-            sleep 2
-          done
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        working-directory: e2e
-        run: npm ci
-
-      - name: Install Playwright browsers
-        working-directory: e2e
-        run: npx playwright install --with-deps chromium
-
       - name: Run E2E tests
-        working-directory: e2e
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx playwright test
+        run: make test-e2e
 
       - name: Upload Playwright report
         if: failure()

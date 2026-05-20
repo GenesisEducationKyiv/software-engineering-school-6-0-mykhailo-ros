@@ -35,7 +35,6 @@ func NewClient(token string, cache Cache) *Client {
 	}
 }
 
-// NewTestClient creates a Client that points at a custom base URL, for use in tests only.
 func NewTestClient(token, apiBase string, cache Cache) *Client {
 	return &Client{
 		httpClient: &http.Client{},

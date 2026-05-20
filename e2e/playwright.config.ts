@@ -6,7 +6,7 @@ export default defineConfig({
   timeout: 30_000,
   retries: 0,
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: process.env.BASE_URL ?? 'http://localhost:8080',
     headless: true,
   },
   projects: [
