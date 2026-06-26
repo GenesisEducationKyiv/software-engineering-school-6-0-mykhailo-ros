@@ -80,10 +80,18 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 }
 
-func (h *SubscriptionHandler) Confirm(c *gin.Context) {
+func parseToken(c *gin.Context) (string, bool) {
 	token := c.Param("token")
 	if len(token) != 32 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token"})
+		return "", false
+	}
+	return token, true
+}
+
+func (h *SubscriptionHandler) Confirm(c *gin.Context) {
+	token, ok := parseToken(c)
+	if !ok {
 		return
 	}
 
@@ -101,9 +109,8 @@ func (h *SubscriptionHandler) Confirm(c *gin.Context) {
 }
 
 func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
-	token := c.Param("token")
-	if len(token) != 32 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token"})
+	token, ok := parseToken(c)
+	if !ok {
 		return
 	}
 
