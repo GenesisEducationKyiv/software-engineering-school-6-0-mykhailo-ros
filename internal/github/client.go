@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,40 +13,37 @@ import (
 	"github-release-notifier/internal/domain"
 )
 
-type Cache interface {
-	Get(key string) (string, error)
-	Set(key, value string, ttl time.Duration) error
-}
-
 var errLatestReleaseNotFound = errors.New("latest release not found")
 
 type Client struct {
 	httpClient *http.Client
 	token      string
-	cache      Cache
 	apiBase    string
 }
 
-func NewClient(token string, cache Cache) *Client {
+func NewClient(token string) *Client {
+	if token == "" {
+		log.Println("github: no token configured, unauthenticated rate limit is 60 req/hour")
+	}
 	return &Client{
 		httpClient: &http.Client{},
 		token:      token,
-		cache:      cache,
 		apiBase:    "https://api.github.com",
 	}
 }
 
-func NewTestClient(token, apiBase string, cache Cache) *Client {
+func NewTestClient(token, apiBase string) *Client {
 	return &Client{
 		httpClient: &http.Client{},
 		token:      token,
-		cache:      cache,
 		apiBase:    apiBase,
 	}
 }
 
 func (c *Client) sendRequest(url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -94,14 +92,6 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 }
 
 func (c *Client) GetLatestRelease(repo string) (*domain.Release, error) {
-	cacheKey := "release:" + repo
-
-	if c.cache != nil {
-		if cached, err := c.cache.Get(cacheKey); err == nil {
-			return &domain.Release{TagName: cached}, nil
-		}
-	}
-
 	resp, err := c.sendRequest(fmt.Sprintf("%s/repos/%s/releases/latest", c.apiBase, repo))
 	if err != nil {
 		return nil, err
@@ -122,13 +112,6 @@ func (c *Client) GetLatestRelease(repo string) (*domain.Release, error) {
 	var release domain.Release
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, err
-	}
-
-	if c.cache != nil && release.TagName != "" {
-		err = c.cache.Set(cacheKey, release.TagName, 10*time.Minute)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &release, nil
