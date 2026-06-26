@@ -1,6 +1,6 @@
 # ADR 004: Background Scheduler — Goroutine with time.Sleep
 
-**Status:** Accepted
+**Status:** Superseded by [ADR 009](009-scheduler-ticker-graceful-shutdown.md)
 **Date:** 2025-04-12
 
 

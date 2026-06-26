@@ -1,6 +1,6 @@
 # ADR 003: Redis Caching of GitHub API Responses
 
-**Status:** Accepted
+**Status:** Superseded by [ADR 008](008-redis-caching-decorator.md)
 **Date:** 2025-04-12
 
 
