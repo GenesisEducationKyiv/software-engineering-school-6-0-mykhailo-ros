@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -23,7 +23,7 @@ type Client struct {
 
 func NewClient(token string) *Client {
 	if token == "" {
-		log.Println("github: no token configured, unauthenticated rate limit is 60 req/hour")
+		slog.Warn("github: no token configured, unauthenticated rate limit is 60 req/hour")
 	}
 	return &Client{
 		httpClient: &http.Client{},
@@ -78,7 +78,7 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+			slog.Error("failed to close response body", "error", err)
 		}
 	}()
 
@@ -98,7 +98,7 @@ func (c *Client) GetLatestRelease(repo string) (*domain.Release, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+			slog.Error("failed to close response body", "error", err)
 		}
 	}()
 

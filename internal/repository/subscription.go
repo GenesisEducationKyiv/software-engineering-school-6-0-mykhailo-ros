@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"log"
+	"log/slog"
 
 	"github-release-notifier/internal/domain"
 	"github.com/lib/pq"
@@ -75,7 +75,7 @@ func (r *SubscriptionRepo) FindByEmail(email string) ([]domain.Subscription, err
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Printf("failed to close db response: %v", err)
+			slog.Error("failed to close db response", "error", err)
 		}
 	}()
 
@@ -99,7 +99,7 @@ func (r *SubscriptionRepo) FindAllConfirmed() ([]domain.Subscription, error) {
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Printf("failed to close db response: %v", err)
+			slog.Error("failed to close db response", "error", err)
 		}
 	}()
 
