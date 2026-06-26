@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github-release-notifier/internal/cache"
+	"github-release-notifier/internal/config"
 	"github-release-notifier/internal/db"
 	"github-release-notifier/internal/github"
 	"github-release-notifier/internal/handler"
@@ -11,7 +13,7 @@ import (
 	"github-release-notifier/internal/scheduler"
 	"github-release-notifier/internal/service"
 	"log"
-	"os"
+	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
@@ -24,13 +26,13 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file, using environment variables")
 	}
-	database, err := db.Connect(
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-	)
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("configuration error: %v", err)
+	}
+
+	database, err := db.Connect(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
 	}
@@ -47,22 +49,18 @@ func main() {
 	log.Println("DB connected and migrations applied")
 
 	repo := repository.NewSubscriptionRepo(database)
-	cacheClient := cache.NewCache()
-	githubClient := github.NewClient(os.Getenv("GITHUB_TOKEN"), cacheClient)
-	mailerClient := mailer.NewMailer(
-		os.Getenv("SMTP_HOST"),
-		os.Getenv("SMTP_PORT"),
-		os.Getenv("SMTP_USERNAME"),
-		os.Getenv("SMTP_PASSWORD"),
-		os.Getenv("SMTP_FROM"),
-	)
+	cacheClient := cache.NewCacheWithAddr(cfg.RedisAddr)
+	rawGithub := github.NewClient(cfg.GithubToken)
+	cachedGithub := github.NewCachingReleaseChecker(rawGithub, cacheClient, 10*time.Minute)
+	mailerClient := mailer.NewMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom)
 
-	svc := service.NewSubscription(repo, githubClient, mailerClient, os.Getenv("BASE_URL"))
+	svc := service.NewSubscription(repo, rawGithub, mailerClient, cfg.BaseURL)
 	h := handler.NewSubscriptionHandler(svc)
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	notifier := scheduler.NewNotifier(repo, githubClient, mailerClient)
+	notifier := scheduler.NewNotifier(repo, cachedGithub, mailerClient)
 	sched := scheduler.NewScheduler(notifier, 10*time.Minute)
 	sched.Start(ctx)
 
@@ -75,7 +73,19 @@ func main() {
 	r.Static("/swagger", "./static/swagger")
 	r.StaticFile("/swagger.yaml", "./swagger.yaml")
 
-	if err := r.Run(":8080"); err != nil {
-		log.Fatal(err)
+	srv := &http.Server{Addr: ":8080", Handler: r}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutting down server...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("server shutdown: %v", err)
 	}
 }
