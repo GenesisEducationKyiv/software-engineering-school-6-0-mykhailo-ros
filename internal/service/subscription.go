@@ -35,15 +35,6 @@ func NewSubscription(repo SubscriptionRepository, github GithubClient, mailer Ma
 	return &Subscription{repo: repo, github: github, mailer: mailer, baseURL: baseURL}
 }
 
-func generateToken() (string, error) {
-	bytes := make([]byte, 16)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
 func (s *Subscription) Subscribe(email, repo string) error {
 	exists, err := s.github.RepoExists(repo)
 	if err != nil {
@@ -86,4 +77,13 @@ func (s *Subscription) Unsubscribe(token string) error {
 
 func (s *Subscription) GetSubscriptions(email string) ([]domain.Subscription, error) {
 	return s.repo.FindByEmail(email)
+}
+
+func generateToken() (string, error) {
+	bytes := make([]byte, 16)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
