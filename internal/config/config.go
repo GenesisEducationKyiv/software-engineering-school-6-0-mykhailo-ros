@@ -40,18 +40,16 @@ func Load() (*Config, error) {
 	}
 
 	required := map[string]string{
-		"DB_HOST":       cfg.DBHost,
-		"DB_PORT":       cfg.DBPort,
-		"DB_USER":       cfg.DBUser,
-		"DB_PASSWORD":   cfg.DBPassword,
-		"DB_NAME":       cfg.DBName,
-		"SMTP_HOST":     cfg.SMTPHost,
-		"SMTP_PORT":     cfg.SMTPPort,
-		"SMTP_USERNAME": cfg.SMTPUsername,
-		"SMTP_PASSWORD": cfg.SMTPPassword,
-		"SMTP_FROM":     cfg.SMTPFrom,
-		"BASE_URL":      cfg.BaseURL,
-		"REDIS_ADDR":    cfg.RedisAddr,
+		"DB_HOST":     cfg.DBHost,
+		"DB_PORT":     cfg.DBPort,
+		"DB_USER":     cfg.DBUser,
+		"DB_PASSWORD": cfg.DBPassword,
+		"DB_NAME":     cfg.DBName,
+		"SMTP_HOST":   cfg.SMTPHost,
+		"SMTP_PORT":   cfg.SMTPPort,
+		"SMTP_FROM":   cfg.SMTPFrom,
+		"BASE_URL":    cfg.BaseURL,
+		"REDIS_ADDR":  cfg.RedisAddr,
 	}
 
 	var missing []string
