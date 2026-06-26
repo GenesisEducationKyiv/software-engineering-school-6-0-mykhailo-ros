@@ -22,9 +22,13 @@ func NewCacheWithAddr(addr string) *Cache {
 }
 
 func (c *Cache) Get(key string) (string, error) {
-	return c.client.Get(context.Background(), key).Result()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return c.client.Get(ctx, key).Result()
 }
 
 func (c *Cache) Set(key, value string, ttl time.Duration) error {
-	return c.client.Set(context.Background(), key, value, ttl).Err()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return c.client.Set(ctx, key, value, ttl).Err()
 }
