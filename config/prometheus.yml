@@ -2,6 +2,6 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: app
+  - job_name: subscription-service
     static_configs:
-      - targets: ["app:8080"]
+      - targets: ["subscription-service:8080"]
