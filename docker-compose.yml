@@ -26,6 +26,18 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   elasticsearch:
     image: elasticsearch:8.13.0
     environment:
@@ -99,16 +111,14 @@ services:
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_NAME: ${DB_NAME:-notifier}
-      SMTP_HOST: ${SMTP_HOST:-mailhog}
-      SMTP_PORT: ${SMTP_PORT:-1025}
-      SMTP_USERNAME: ${SMTP_USERNAME:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-noreply@github-notifier.com}
       BASE_URL: ${BASE_URL:-http://localhost:8080}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-internal-secret}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/}
     depends_on:
       db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 8080 || exit 1"]
@@ -136,8 +146,11 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-internal-secret}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/}
     depends_on:
       subscription-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   e2e:
