@@ -16,13 +16,13 @@ func (m *mockGithub) RepoExists(repo string) (bool, error) {
 	return m.exists, m.err
 }
 
-type mockMailer struct {
-	confirmCalled bool
-	err           error
+type mockPublisher struct {
+	called bool
+	err    error
 }
 
-func (m *mockMailer) SendConfirmation(to, repo, confirmURL string) error {
-	m.confirmCalled = true
+func (m *mockPublisher) PublishSubscriptionCreated(email, repo, confirmURL string) error {
+	m.called = true
 	return m.err
 }
 
@@ -69,7 +69,7 @@ func TestSubscribe_Success(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{},
 		&mockGithub{exists: true},
-		&mockMailer{},
+		&mockPublisher{},
 		"",
 	)
 
@@ -82,7 +82,7 @@ func TestSubscribe_RepoNotFound(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{},
 		&mockGithub{exists: false},
-		&mockMailer{},
+		&mockPublisher{},
 		"",
 	)
 
@@ -96,7 +96,7 @@ func TestSubscribe_GithubError(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{},
 		&mockGithub{err: fmt.Errorf("rate limit exceeded")},
-		&mockMailer{},
+		&mockPublisher{},
 		"",
 	)
 
@@ -110,7 +110,7 @@ func TestConfirm_Success(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
-		&mockMailer{},
+		&mockPublisher{},
 		"",
 	)
 
@@ -123,7 +123,7 @@ func TestConfirm_TokenNotFound(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: nil},
 		&mockGithub{},
-		&mockMailer{},
+		&mockPublisher{},
 		"",
 	)
 
@@ -137,7 +137,7 @@ func TestUnsubscribe_Success(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
-		&mockMailer{},
+		&mockPublisher{},
 		"",
 	)
 
@@ -150,7 +150,7 @@ func TestUnsubscribe_TokenNotFound(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: nil},
 		&mockGithub{},
-		&mockMailer{},
+		&mockPublisher{},
 		"",
 	)
 

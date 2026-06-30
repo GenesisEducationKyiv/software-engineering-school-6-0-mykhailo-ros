@@ -12,14 +12,10 @@ type Config struct {
 	DBUser        string
 	DBPassword    string
 	DBName        string
-	SMTPHost      string
-	SMTPPort      string
-	SMTPUsername  string
-	SMTPPassword  string
-	SMTPFrom      string
 	BaseURL       string
 	GithubToken   string
 	InternalToken string
+	RabbitMQURL   string
 }
 
 func Load() (*Config, error) {
@@ -29,26 +25,20 @@ func Load() (*Config, error) {
 		DBUser:        os.Getenv("DB_USER"),
 		DBPassword:    os.Getenv("DB_PASSWORD"),
 		DBName:        os.Getenv("DB_NAME"),
-		SMTPHost:      os.Getenv("SMTP_HOST"),
-		SMTPPort:      os.Getenv("SMTP_PORT"),
-		SMTPUsername:  os.Getenv("SMTP_USERNAME"),
-		SMTPPassword:  os.Getenv("SMTP_PASSWORD"),
-		SMTPFrom:      os.Getenv("SMTP_FROM"),
 		BaseURL:       os.Getenv("BASE_URL"),
 		GithubToken:   os.Getenv("GITHUB_TOKEN"),
 		InternalToken: os.Getenv("INTERNAL_TOKEN"),
+		RabbitMQURL:   os.Getenv("RABBITMQ_URL"),
 	}
 
 	required := map[string]string{
-		"DB_HOST":     cfg.DBHost,
-		"DB_PORT":     cfg.DBPort,
-		"DB_USER":     cfg.DBUser,
-		"DB_PASSWORD": cfg.DBPassword,
-		"DB_NAME":     cfg.DBName,
-		"SMTP_HOST":   cfg.SMTPHost,
-		"SMTP_PORT":   cfg.SMTPPort,
-		"SMTP_FROM":   cfg.SMTPFrom,
-		"BASE_URL":    cfg.BaseURL,
+		"DB_HOST":      cfg.DBHost,
+		"DB_PORT":      cfg.DBPort,
+		"DB_USER":      cfg.DBUser,
+		"DB_PASSWORD":  cfg.DBPassword,
+		"DB_NAME":      cfg.DBName,
+		"BASE_URL":     cfg.BaseURL,
+		"RABBITMQ_URL": cfg.RabbitMQURL,
 	}
 
 	var missing []string

@@ -11,8 +11,8 @@ type GithubClient interface {
 	RepoExists(repo string) (bool, error)
 }
 
-type Mailer interface {
-	SendConfirmation(to, repo, confirmURL string) error
+type EventPublisher interface {
+	PublishSubscriptionCreated(email, repo, confirmURL string) error
 }
 
 type SubscriptionRepository interface {
@@ -25,14 +25,14 @@ type SubscriptionRepository interface {
 }
 
 type Subscription struct {
-	repo    SubscriptionRepository
-	github  GithubClient
-	mailer  Mailer
-	baseURL string
+	repo      SubscriptionRepository
+	github    GithubClient
+	publisher EventPublisher
+	baseURL   string
 }
 
-func NewSubscription(repo SubscriptionRepository, github GithubClient, mailer Mailer, baseURL string) *Subscription {
-	return &Subscription{repo: repo, github: github, mailer: mailer, baseURL: baseURL}
+func NewSubscription(repo SubscriptionRepository, github GithubClient, publisher EventPublisher, baseURL string) *Subscription {
+	return &Subscription{repo: repo, github: github, publisher: publisher, baseURL: baseURL}
 }
 
 func (s *Subscription) Subscribe(email, repo string) error {
@@ -58,7 +58,7 @@ func (s *Subscription) Subscribe(email, repo string) error {
 	}
 
 	confirmURL := fmt.Sprintf("%s/api/confirm/%s", s.baseURL, confirmToken)
-	return s.mailer.SendConfirmation(email, repo, confirmURL)
+	return s.publisher.PublishSubscriptionCreated(email, repo, confirmURL)
 }
 
 func (s *Subscription) Confirm(token string) error {
