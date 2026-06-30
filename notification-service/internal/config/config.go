@@ -16,6 +16,7 @@ type Config struct {
 	GithubToken            string
 	RedisAddr              string
 	InternalToken          string
+	RabbitMQURL            string
 }
 
 func Load() (*Config, error) {
@@ -29,6 +30,7 @@ func Load() (*Config, error) {
 		GithubToken:            os.Getenv("GITHUB_TOKEN"),
 		RedisAddr:              os.Getenv("REDIS_ADDR"),
 		InternalToken:          os.Getenv("INTERNAL_TOKEN"),
+		RabbitMQURL:            os.Getenv("RABBITMQ_URL"),
 	}
 
 	required := map[string]string{
@@ -37,6 +39,7 @@ func Load() (*Config, error) {
 		"SMTP_PORT":                cfg.SMTPPort,
 		"SMTP_FROM":                cfg.SMTPFrom,
 		"REDIS_ADDR":               cfg.RedisAddr,
+		"RABBITMQ_URL":             cfg.RabbitMQURL,
 	}
 
 	var missing []string
