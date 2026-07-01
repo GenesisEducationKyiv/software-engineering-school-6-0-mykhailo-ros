@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -43,19 +42,13 @@ func RunMigrations(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		srcErr, dbErr := m.Close()
-		if srcErr != nil {
-			slog.Warn("migrate: close source", "error", srcErr)
-		}
-		if dbErr != nil {
-			slog.Warn("migrate: close db driver", "error", dbErr)
-		}
-	}()
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 
+	// Deliberately not calling m.Close(): migrate's postgres driver Close()
+	// also closes the underlying *sql.DB (WithInstance shares it), but the
+	// caller keeps using that connection for the lifetime of the process.
 	return nil
 }
