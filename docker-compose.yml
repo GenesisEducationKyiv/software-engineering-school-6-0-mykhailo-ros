@@ -54,6 +54,7 @@ services:
       - ./config/logstash/pipeline.conf:/usr/share/logstash/pipeline/pipeline.conf:z
     environment:
       - LS_JAVA_OPTS=-Xms256m -Xmx256m
+      - LS_LOG_LEVEL=error
     depends_on:
       - elasticsearch
     healthcheck:
