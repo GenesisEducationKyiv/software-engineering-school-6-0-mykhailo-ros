@@ -17,16 +17,27 @@ func NewSubscriptionRepo(db *sql.DB) *SubscriptionRepo {
 	return &SubscriptionRepo{db: db}
 }
 
-func (r *SubscriptionRepo) Create(email, repo, confirmToken, unsubscribeToken string) error {
-	_, err := r.db.Exec(`
-		INSERT INTO subscriptions (email, repo, confirm_token, unsubscribe_token)
-		VALUES ($1, $2, $3, $4)`,
+func (r *SubscriptionRepo) Create(email, repo, confirmToken, unsubscribeToken string) (int, error) {
+	var id int
+	err := r.db.QueryRow(`
+		INSERT INTO subscriptions (email, repo, confirm_token, unsubscribe_token, status)
+		VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
 		email, repo, confirmToken, unsubscribeToken,
-	)
+	).Scan(&id)
 	var pgErr *pq.Error
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-		return domain.ErrAlreadySubscribed
+		return 0, domain.ErrAlreadySubscribed
 	}
+	return id, err
+}
+
+func (r *SubscriptionRepo) UpdateStatus(id int, status string) error {
+	_, err := r.db.Exec(`UPDATE subscriptions SET status = $1 WHERE id = $2`, status, id)
+	return err
+}
+
+func (r *SubscriptionRepo) DeleteByID(id int) error {
+	_, err := r.db.Exec(`DELETE FROM subscriptions WHERE id = $1`, id)
 	return err
 }
 

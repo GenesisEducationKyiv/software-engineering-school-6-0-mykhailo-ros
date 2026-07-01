@@ -45,13 +45,6 @@ func main() {
 	}
 	defer consumer.Close()
 
-	consumer, err := events.NewConsumer(cfg.RabbitMQURL, mailerClient)
-	if err != nil {
-		slog.Error("failed to connect to RabbitMQ", "error", err)
-		os.Exit(1)
-	}
-	defer consumer.Close()
-
 	notifier := scheduler.NewNotifier(subscriptionClient, cachedGithub, mailerClient)
 	sched := scheduler.NewScheduler(notifier, 10*time.Minute)
 

@@ -9,7 +9,10 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const exchangeName = "subscription.events"
+const (
+	sagaExchange   = "saga.commands"
+	commandRouting = "send-confirmation-email"
+)
 
 type Publisher struct {
 	conn *amqp.Connection
@@ -27,7 +30,7 @@ func NewPublisher(url string) (*Publisher, error) {
 		_ = conn.Close()
 		return nil, fmt.Errorf("events: channel: %w", err)
 	}
-	if err := ch.ExchangeDeclare(exchangeName, "fanout", true, false, false, false, nil); err != nil {
+	if err := ch.ExchangeDeclare(sagaExchange, "direct", true, false, false, false, nil); err != nil {
 		_ = ch.Close()
 		_ = conn.Close()
 		return nil, fmt.Errorf("events: declare exchange: %w", err)
@@ -35,7 +38,7 @@ func NewPublisher(url string) (*Publisher, error) {
 	return &Publisher{conn: conn, ch: ch}, nil
 }
 
-func (p *Publisher) PublishSubscriptionCreated(email, repo, confirmURL string) error {
+func (p *Publisher) PublishEmailCommand(email, repo, confirmURL, correlationID, replyTo string) error {
 	body, err := json.Marshal(map[string]string{
 		"email":       email,
 		"repo":        repo,
@@ -47,9 +50,11 @@ func (p *Publisher) PublishSubscriptionCreated(email, repo, confirmURL string) e
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.ch.Publish(exchangeName, "", false, false, amqp.Publishing{
-		ContentType: "application/json",
-		Body:        body,
+	return p.ch.Publish(sagaExchange, commandRouting, false, false, amqp.Publishing{
+		ContentType:   "application/json",
+		CorrelationId: correlationID,
+		ReplyTo:       replyTo,
+		Body:          body,
 	})
 }
 

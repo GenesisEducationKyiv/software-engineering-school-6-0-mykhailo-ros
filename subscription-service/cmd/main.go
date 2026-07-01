@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,9 +15,12 @@ import (
 	"subscription-service/internal/handler"
 	"subscription-service/internal/metrics"
 	"subscription-service/internal/repository"
+	"subscription-service/internal/saga"
 	"subscription-service/internal/service"
 	"syscall"
 	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -67,7 +71,21 @@ func main() {
 	}
 	defer publisher.Close()
 
-	svc := service.NewSubscription(repo, rawGithub, publisher, cfg.BaseURL)
+	rc, replyQueueName, err := newReplyConsumer(cfg.RabbitMQURL)
+	if err != nil {
+		slog.Error("failed to create reply queue", "error", err)
+		os.Exit(1)
+	}
+	defer rc.close()
+
+	replies, err := rc.consume()
+	if err != nil {
+		slog.Error("failed to start consuming replies", "error", err)
+		os.Exit(1)
+	}
+
+	orch := saga.New(repo, publisher, replies, replyQueueName)
+	svc := service.NewSubscription(repo, rawGithub, orch, cfg.BaseURL)
 	h := handler.NewSubscriptionHandler(svc)
 	ih := handler.NewInternalHandler(repo)
 
@@ -115,4 +133,38 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("server shutdown", "error", err)
 	}
+}
+
+type replyConsumerHandle struct {
+	conn *amqp.Connection
+	ch   *amqp.Channel
+	name string
+}
+
+func newReplyConsumer(url string) (*replyConsumerHandle, string, error) {
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		return nil, "", fmt.Errorf("reply queue: dial: %w", err)
+	}
+	ch, err := conn.Channel()
+	if err != nil {
+		conn.Close()
+		return nil, "", fmt.Errorf("reply queue: channel: %w", err)
+	}
+	q, err := ch.QueueDeclare("", false, true, true, false, nil)
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, "", fmt.Errorf("reply queue: declare: %w", err)
+	}
+	return &replyConsumerHandle{conn: conn, ch: ch, name: q.Name}, q.Name, nil
+}
+
+func (rc *replyConsumerHandle) consume() (<-chan amqp.Delivery, error) {
+	return rc.ch.Consume(rc.name, "", true, true, false, false, nil)
+}
+
+func (rc *replyConsumerHandle) close() {
+	rc.ch.Close()
+	rc.conn.Close()
 }
