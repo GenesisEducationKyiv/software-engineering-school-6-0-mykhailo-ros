@@ -1,8 +1,12 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -17,11 +21,13 @@ func Connect(host, port, user, password, dbname string) (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open postgres: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, err
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 
 	return db, nil
@@ -37,8 +43,17 @@ func RunMigrations(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		srcErr, dbErr := m.Close()
+		if srcErr != nil {
+			slog.Warn("migrate: close source", "error", srcErr)
+		}
+		if dbErr != nil {
+			slog.Warn("migrate: close db driver", "error", dbErr)
+		}
+	}()
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 

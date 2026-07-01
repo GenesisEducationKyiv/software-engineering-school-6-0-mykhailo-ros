@@ -55,15 +55,27 @@ func (r *SubscriptionRepo) FindByUnsubscribeToken(token string) (*domain.Subscri
 }
 
 func (r *SubscriptionRepo) Confirm(token string) error {
-	_, err := r.db.Exec(
+	result, err := r.db.Exec(
 		`UPDATE subscriptions SET confirmed = true WHERE confirm_token = $1`, token)
-	return err
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }
 
 func (r *SubscriptionRepo) DeleteByUnsubscribeToken(token string) error {
-	_, err := r.db.Exec(
+	result, err := r.db.Exec(
 		`DELETE FROM subscriptions WHERE unsubscribe_token = $1`, token)
-	return err
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }
 
 func (r *SubscriptionRepo) FindByEmail(email string) ([]domain.Subscription, error) {
@@ -86,6 +98,9 @@ func (r *SubscriptionRepo) FindByEmail(email string) ([]domain.Subscription, err
 			return nil, err
 		}
 		subs = append(subs, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return subs, nil
 }
@@ -110,6 +125,9 @@ func (r *SubscriptionRepo) FindAllConfirmed() ([]domain.Subscription, error) {
 			return nil, err
 		}
 		subs = append(subs, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return subs, nil
 }
