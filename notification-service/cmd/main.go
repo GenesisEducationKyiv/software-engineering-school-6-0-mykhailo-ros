@@ -34,7 +34,7 @@ func main() {
 	rawGithub := github.NewClient(cfg.GithubToken)
 	cachedGithub := github.NewCachingReleaseChecker(rawGithub, cacheClient, 10*time.Minute)
 	mailerClient := mailer.NewMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom)
-	subscriptionClient := client.NewSubscriptionClient(cfg.SubscriptionServiceURL)
+	subscriptionClient := client.NewSubscriptionClient(cfg.SubscriptionServiceURL, cfg.InternalToken)
 
 	notifier := scheduler.NewNotifier(subscriptionClient, cachedGithub, mailerClient)
 	sched := scheduler.NewScheduler(notifier, 10*time.Minute)

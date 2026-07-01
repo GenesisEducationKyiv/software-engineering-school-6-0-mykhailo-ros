@@ -76,17 +76,28 @@ func main() {
 	r.GET("/api/confirm/:token", h.Confirm)
 	r.GET("/api/unsubscribe/:token", h.Unsubscribe)
 	r.GET("/api/subscriptions", h.GetSubscriptions)
-	r.GET("/internal/subscriptions", ih.ListConfirmed)
-	r.PATCH("/internal/subscriptions/:id/last-seen-tag", ih.UpdateLastSeenTag)
+
+	internal := r.Group("/internal")
+	internal.Use(handler.RequireInternalToken(cfg.InternalToken))
+	internal.GET("/subscriptions", ih.ListConfirmed)
+	internal.PATCH("/subscriptions/:id/last-seen-tag", ih.UpdateLastSeenTag)
+
 	r.StaticFile("/", "./static/index.html")
 	r.Static("/swagger", "./static/swagger")
 	r.StaticFile("/swagger.yaml", "./swagger.yaml")
 
-	srv := &http.Server{Addr: ":8080", Handler: r}
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server error", "error", err)
-			os.Exit(1)
+			stop()
 		}
 	}()
 

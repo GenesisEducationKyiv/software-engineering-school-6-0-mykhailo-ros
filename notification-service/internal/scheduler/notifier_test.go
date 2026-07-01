@@ -1,6 +1,7 @@
 package scheduler_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -13,19 +14,19 @@ import (
 // --- mocks ---
 
 type mockStore struct {
-	subs          []domain.Subscription
-	findErr       error
-	updateErr     error
-	updatedCalls  int
+	subs           []domain.Subscription
+	findErr        error
+	updateErr      error
+	updatedCalls   int
 	lastUpdatedID  int
 	lastUpdatedTag string
 }
 
-func (m *mockStore) FindAllConfirmed() ([]domain.Subscription, error) {
+func (m *mockStore) FindAllConfirmed(_ context.Context) ([]domain.Subscription, error) {
 	return m.subs, m.findErr
 }
 
-func (m *mockStore) UpdateLastSeenTag(id int, tag string) error {
+func (m *mockStore) UpdateLastSeenTag(_ context.Context, id int, tag string) error {
 	m.updatedCalls++
 	m.lastUpdatedID = id
 	m.lastUpdatedTag = tag
@@ -73,7 +74,7 @@ func (m *mockSender) SendReleaseNotification(to, _, tag string) error {
 func TestNotifier_NoSubscriptions(t *testing.T) {
 	store := &mockStore{}
 	n := scheduler.NewNotifier(store, newMockChecker(), &mockSender{})
-	n.Run()
+	n.Run(context.Background())
 	assert.Empty(t, store.updatedCalls)
 }
 
@@ -87,7 +88,7 @@ func TestNotifier_NewRelease(t *testing.T) {
 	checker.releases["owner/repo"] = "v2.0.0"
 	sender := &mockSender{}
 
-	scheduler.NewNotifier(store, checker, sender).Run()
+	scheduler.NewNotifier(store, checker, sender).Run(context.Background())
 
 	assert.Equal(t, []string{"a@b.com"}, sender.sentTo)
 	assert.Equal(t, []string{"v2.0.0"}, sender.sentTag)
@@ -105,7 +106,7 @@ func TestNotifier_SameTag_NoNotification(t *testing.T) {
 	checker.releases["owner/repo"] = "v1.0.0"
 	sender := &mockSender{}
 
-	scheduler.NewNotifier(store, checker, sender).Run()
+	scheduler.NewNotifier(store, checker, sender).Run(context.Background())
 
 	assert.Empty(t, sender.sentTo)
 	assert.Equal(t, 0, store.updatedCalls)
@@ -122,7 +123,7 @@ func TestNotifier_EmptyTag_NoNotification(t *testing.T) {
 
 	sender := &mockSender{}
 
-	scheduler.NewNotifier(store, checker, sender).Run()
+	scheduler.NewNotifier(store, checker, sender).Run(context.Background())
 
 	assert.Empty(t, sender.sentTo)
 	assert.Equal(t, 0, store.updatedCalls)
@@ -139,7 +140,7 @@ func TestNotifier_GitHubError_SkipsSubscriber(t *testing.T) {
 	sender := &mockSender{}
 
 	// must not panic
-	scheduler.NewNotifier(store, checker, sender).Run()
+	scheduler.NewNotifier(store, checker, sender).Run(context.Background())
 
 	assert.Empty(t, sender.sentTo)
 	assert.Equal(t, 0, store.updatedCalls)
@@ -155,7 +156,7 @@ func TestNotifier_MailerError_DoesNotUpdateTag(t *testing.T) {
 	checker.releases["owner/repo"] = "v2.0.0"
 	sender := &mockSender{err: errors.New("smtp failure")}
 
-	scheduler.NewNotifier(store, checker, sender).Run()
+	scheduler.NewNotifier(store, checker, sender).Run(context.Background())
 
 	assert.Equal(t, 0, store.updatedCalls, "UpdateLastSeenTag must not be called after mailer error")
 }
@@ -171,7 +172,7 @@ func TestNotifier_DeduplicatesRepoLookup(t *testing.T) {
 	checker.releases["owner/repo"] = "v2.0.0"
 	sender := &mockSender{}
 
-	scheduler.NewNotifier(store, checker, sender).Run()
+	scheduler.NewNotifier(store, checker, sender).Run(context.Background())
 
 	assert.Equal(t, 1, checker.callCount["owner/repo"], "GitHub API must be called only once per repo")
 	assert.Equal(t, 2, len(sender.sentTo), "both subscribers must be notified")
@@ -183,7 +184,7 @@ func TestNotifier_FindAllConfirmedError(t *testing.T) {
 	sender := &mockSender{}
 
 	// must not panic
-	scheduler.NewNotifier(store, newMockChecker(), sender).Run()
+	scheduler.NewNotifier(store, newMockChecker(), sender).Run(context.Background())
 
 	assert.Empty(t, sender.sentTo)
 }

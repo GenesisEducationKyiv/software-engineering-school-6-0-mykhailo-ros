@@ -2,23 +2,36 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"notification-service/internal/domain"
+	"time"
 )
 
 type SubscriptionClient struct {
-	baseURL string
-	http    *http.Client
+	baseURL       string
+	internalToken string
+	http          *http.Client
 }
 
-func NewSubscriptionClient(baseURL string) *SubscriptionClient {
-	return &SubscriptionClient{baseURL: baseURL, http: &http.Client{}}
+func NewSubscriptionClient(baseURL, internalToken string) *SubscriptionClient {
+	return &SubscriptionClient{
+		baseURL:       baseURL,
+		internalToken: internalToken,
+		http:          &http.Client{Timeout: 10 * time.Second},
+	}
 }
 
-func (c *SubscriptionClient) FindAllConfirmed() ([]domain.Subscription, error) {
-	resp, err := c.http.Get(c.baseURL + "/internal/subscriptions")
+func (c *SubscriptionClient) FindAllConfirmed(ctx context.Context) ([]domain.Subscription, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/subscriptions", nil)
+	if err != nil {
+		return nil, fmt.Errorf("client: list confirmed: %w", err)
+	}
+	req.Header.Set("X-Internal-Token", c.internalToken)
+
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("client: list confirmed: %w", err)
 	}
@@ -45,15 +58,20 @@ func (c *SubscriptionClient) FindAllConfirmed() ([]domain.Subscription, error) {
 	return subs, nil
 }
 
-func (c *SubscriptionClient) UpdateLastSeenTag(id int, tag string) error {
-	body, _ := json.Marshal(map[string]string{"tag": tag})
-	req, err := http.NewRequest(http.MethodPatch,
+func (c *SubscriptionClient) UpdateLastSeenTag(ctx context.Context, id int, tag string) error {
+	body, err := json.Marshal(map[string]string{"tag": tag})
+	if err != nil {
+		return fmt.Errorf("client: update tag: marshal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch,
 		fmt.Sprintf("%s/internal/subscriptions/%d/last-seen-tag", c.baseURL, id),
 		bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("client: update tag: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Internal-Token", c.internalToken)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

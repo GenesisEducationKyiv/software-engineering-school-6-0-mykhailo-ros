@@ -15,6 +15,7 @@ type Config struct {
 	SMTPFrom               string
 	GithubToken            string
 	RedisAddr              string
+	InternalToken          string
 }
 
 func Load() (*Config, error) {
@@ -27,6 +28,7 @@ func Load() (*Config, error) {
 		SMTPFrom:               os.Getenv("SMTP_FROM"),
 		GithubToken:            os.Getenv("GITHUB_TOKEN"),
 		RedisAddr:              os.Getenv("REDIS_ADDR"),
+		InternalToken:          os.Getenv("INTERNAL_TOKEN"),
 	}
 
 	required := map[string]string{

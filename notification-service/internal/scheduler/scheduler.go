@@ -2,14 +2,14 @@ package scheduler
 
 import (
 	"context"
-	"notification-service/internal/domain"
 	"log/slog"
+	"notification-service/internal/domain"
 	"time"
 )
 
 type NotificationStore interface {
-	FindAllConfirmed() ([]domain.Subscription, error)
-	UpdateLastSeenTag(id int, tag string) error
+	FindAllConfirmed(ctx context.Context) ([]domain.Subscription, error)
+	UpdateLastSeenTag(ctx context.Context, id int, tag string) error
 }
 
 type ReleaseChecker interface {
@@ -21,7 +21,7 @@ type NotificationSender interface {
 }
 
 type NotificationJob interface {
-	Run()
+	Run(ctx context.Context)
 }
 
 type Notifier struct {
@@ -34,8 +34,8 @@ func NewNotifier(repo NotificationStore, github ReleaseChecker, mailer Notificat
 	return &Notifier{repo: repo, github: github, mailer: mailer}
 }
 
-func (n *Notifier) Run() {
-	subs, err := n.repo.FindAllConfirmed()
+func (n *Notifier) Run(ctx context.Context) {
+	subs, err := n.repo.FindAllConfirmed(ctx)
 	if err != nil {
 		slog.Error("scheduler: failed to fetch subscriptions", "error", err)
 		return
@@ -64,7 +64,7 @@ func (n *Notifier) Run() {
 			continue
 		}
 
-		if err := n.repo.UpdateLastSeenTag(sub.ID, tag); err != nil {
+		if err := n.repo.UpdateLastSeenTag(ctx, sub.ID, tag); err != nil {
 			slog.Error("scheduler: failed to update last_seen_tag", "email", sub.Email, "error", err)
 		}
 	}
@@ -89,7 +89,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 					slog.Error("scheduler: panic in job", "error", r)
 				}
 			}()
-			s.job.Run()
+			s.job.Run(ctx)
 		}
 		safeRun()
 		for {

@@ -82,6 +82,20 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 }
 
+func RequireInternalToken(token string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if token == "" {
+			c.Next()
+			return
+		}
+		if c.GetHeader("X-Internal-Token") != token {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		c.Next()
+	}
+}
+
 func parseToken(c *gin.Context) (string, bool) {
 	token := c.Param("token")
 	if len(token) != 32 {
@@ -139,6 +153,7 @@ func (h *SubscriptionHandler) GetSubscriptions(c *gin.Context) {
 	subs, err := h.service.GetSubscriptions(email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
 
 	type response struct {
