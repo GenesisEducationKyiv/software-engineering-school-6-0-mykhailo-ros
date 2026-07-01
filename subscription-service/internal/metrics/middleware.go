@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -17,15 +18,25 @@ func Middleware() gin.HandlerFunc {
 
 		c.Next()
 
+		status := c.Writer.Status()
+		duration := time.Since(start)
+
 		RequestsTotal.WithLabelValues(
 			c.Request.Method,
 			path,
-			strconv.Itoa(c.Writer.Status()),
+			strconv.Itoa(status),
 		).Inc()
 
 		RequestDuration.WithLabelValues(
 			c.Request.Method,
 			path,
-		).Observe(time.Since(start).Seconds())
+		).Observe(duration.Seconds())
+
+		slog.Info("request",
+			"method", c.Request.Method,
+			"path", path,
+			"status", status,
+			"duration_ms", duration.Milliseconds(),
+		)
 	}
 }
