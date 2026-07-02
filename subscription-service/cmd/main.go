@@ -92,6 +92,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	go orch.Start(ctx)
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(metrics.Middleware())

@@ -7,6 +7,8 @@ import (
 
 func correlationID() string {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("saga: crypto/rand unavailable: " + err.Error())
+	}
 	return hex.EncodeToString(b)
 }

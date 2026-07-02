@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -21,7 +22,7 @@ type mockOrchestrator struct {
 	err    error
 }
 
-func (m *mockOrchestrator) Execute(email, repo, confirmToken, unsubscribeToken, confirmURL string) error {
+func (m *mockOrchestrator) Execute(ctx context.Context, email, repo, confirmToken, unsubscribeToken, confirmURL string) error {
 	m.called = true
 	return m.err
 }
@@ -67,7 +68,7 @@ func TestSubscribe_Success(t *testing.T) {
 		"",
 	)
 
-	if err := svc.Subscribe("test@test.com", "golang/go"); err != nil {
+	if err := svc.Subscribe(context.Background(), "test@test.com", "golang/go"); err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 }
@@ -80,7 +81,7 @@ func TestSubscribe_RepoNotFound(t *testing.T) {
 		"",
 	)
 
-	err := svc.Subscribe("test@test.com", "golang/go")
+	err := svc.Subscribe(context.Background(), "test@test.com", "golang/go")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -94,7 +95,7 @@ func TestSubscribe_GithubError(t *testing.T) {
 		"",
 	)
 
-	err := svc.Subscribe("test@test.com", "golang/go")
+	err := svc.Subscribe(context.Background(), "test@test.com", "golang/go")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}

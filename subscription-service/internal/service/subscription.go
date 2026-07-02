@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -12,7 +13,7 @@ type GithubClient interface {
 }
 
 type SagaOrchestrator interface {
-	Execute(email, repo, confirmToken, unsubscribeToken, confirmURL string) error
+	Execute(ctx context.Context, email, repo, confirmToken, unsubscribeToken, confirmURL string) error
 }
 
 type SubscriptionRepository interface {
@@ -34,7 +35,7 @@ func NewSubscription(repo SubscriptionRepository, github GithubClient, orchestra
 	return &Subscription{repo: repo, github: github, orchestrator: orchestrator, baseURL: baseURL}
 }
 
-func (s *Subscription) Subscribe(email, repo string) error {
+func (s *Subscription) Subscribe(ctx context.Context, email, repo string) error {
 	exists, err := s.github.RepoExists(repo)
 	if err != nil {
 		return fmt.Errorf("github: %w", err)
@@ -53,7 +54,7 @@ func (s *Subscription) Subscribe(email, repo string) error {
 	}
 
 	confirmURL := fmt.Sprintf("%s/api/confirm/%s", s.baseURL, confirmToken)
-	return s.orchestrator.Execute(email, repo, confirmToken, unsubscribeToken, confirmURL)
+	return s.orchestrator.Execute(ctx, email, repo, confirmToken, unsubscribeToken, confirmURL)
 }
 
 func (s *Subscription) Confirm(token string) error {

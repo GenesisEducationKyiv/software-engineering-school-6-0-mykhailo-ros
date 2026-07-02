@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +21,7 @@ type mockService struct {
 	subscriptions  []domain.Subscription
 }
 
-func (m *mockService) Subscribe(email, repo string) error {
+func (m *mockService) Subscribe(ctx context.Context, email, repo string) error {
 	return m.subscribeErr
 }
 
