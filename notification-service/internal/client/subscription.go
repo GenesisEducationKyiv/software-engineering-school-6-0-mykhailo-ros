@@ -35,7 +35,7 @@ func (c *SubscriptionClient) FindAllConfirmed(ctx context.Context) ([]domain.Sub
 	if err != nil {
 		return nil, fmt.Errorf("client: list confirmed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("client: list confirmed: unexpected status %d", resp.StatusCode)
@@ -77,7 +77,7 @@ func (c *SubscriptionClient) UpdateLastSeenTag(ctx context.Context, id int, tag 
 	if err != nil {
 		return fmt.Errorf("client: update tag: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("client: update tag: unexpected status %d", resp.StatusCode)

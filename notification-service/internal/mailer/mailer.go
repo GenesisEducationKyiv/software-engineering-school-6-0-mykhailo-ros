@@ -29,7 +29,7 @@ func (m *Mailer) send(to, subject, body string) error {
 	if err != nil {
 		return fmt.Errorf("mailer: dial: %w", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	if err := conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
 		return fmt.Errorf("mailer: set deadline: %w", err)
 	}
@@ -38,7 +38,7 @@ func (m *Mailer) send(to, subject, body string) error {
 	if err != nil {
 		return fmt.Errorf("mailer: new client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	if ok, _ := client.Extension("STARTTLS"); ok {
 		if err := client.StartTLS(&tls.Config{ServerName: m.host}); err != nil {
