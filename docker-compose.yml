@@ -95,9 +95,12 @@ services:
       - prometheus
 
   subscription-service:
-    build: ./subscription-service
+    build:
+      context: .
+      dockerfile: subscription-service/Dockerfile
     ports:
       - "8080:8080"
+      - "9091:9090"
     logging:
       driver: gelf
       options:
@@ -128,7 +131,9 @@ services:
       start_period: 10s
 
   notification-service:
-    build: ./notification-service
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
     logging:
       driver: gelf
       options:
@@ -138,6 +143,7 @@ services:
         required: false
     environment:
       SUBSCRIPTION_SERVICE_URL: http://subscription-service:8080
+      SUBSCRIPTION_SERVICE_GRPC_ADDR: subscription-service:9090
       SMTP_HOST: ${SMTP_HOST:-mailhog}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USERNAME: ${SMTP_USERNAME:-}

@@ -10,21 +10,21 @@ import (
 	"time"
 )
 
-type SubscriptionClient struct {
+type RESTClient struct {
 	baseURL       string
 	internalToken string
 	http          *http.Client
 }
 
-func NewSubscriptionClient(baseURL, internalToken string) *SubscriptionClient {
-	return &SubscriptionClient{
+func NewRESTClient(baseURL, internalToken string) *RESTClient {
+	return &RESTClient{
 		baseURL:       baseURL,
 		internalToken: internalToken,
 		http:          &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-func (c *SubscriptionClient) FindAllConfirmed(ctx context.Context) ([]domain.Subscription, error) {
+func (c *RESTClient) FindAllConfirmed(ctx context.Context) ([]domain.Subscription, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/subscriptions", nil)
 	if err != nil {
 		return nil, fmt.Errorf("client: list confirmed: %w", err)
@@ -58,7 +58,7 @@ func (c *SubscriptionClient) FindAllConfirmed(ctx context.Context) ([]domain.Sub
 	return subs, nil
 }
 
-func (c *SubscriptionClient) UpdateLastSeenTag(ctx context.Context, id int, tag string) error {
+func (c *RESTClient) UpdateLastSeenTag(ctx context.Context, id int, tag string) error {
 	body, err := json.Marshal(map[string]string{"tag": tag})
 	if err != nil {
 		return fmt.Errorf("client: update tag: marshal: %w", err)

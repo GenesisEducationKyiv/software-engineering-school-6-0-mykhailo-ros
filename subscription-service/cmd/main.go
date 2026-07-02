@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"net"
 	"subscription-service/internal/config"
 	"subscription-service/internal/db"
 	"subscription-service/internal/events"
 	"subscription-service/internal/github"
 	"subscription-service/internal/handler"
+	grpcserver "subscription-service/internal/grpc"
 	"subscription-service/internal/metrics"
 	"subscription-service/internal/repository"
 	"subscription-service/internal/saga"
@@ -20,12 +22,15 @@ import (
 	"syscall"
 	"time"
 
+	subscriptionv1 "github-release-notifier/gen/subscription/v1"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -127,6 +132,20 @@ func main() {
 		}
 	}()
 
+	grpcLis, err := net.Listen("tcp", ":9090")
+	if err != nil {
+		slog.Error("failed to listen for grpc", "error", err)
+		os.Exit(1)
+	}
+	grpcSrv := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.AuthUnaryInterceptor(cfg.InternalToken)))
+	subscriptionv1.RegisterSubscriptionServiceServer(grpcSrv, grpcserver.NewServer(repo))
+	go func() {
+		if err := grpcSrv.Serve(grpcLis); err != nil {
+			slog.Error("grpc server error", "error", err)
+			stop()
+		}
+	}()
+
 	<-ctx.Done()
 	slog.Info("shutting down server")
 
@@ -134,6 +153,17 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("server shutdown", "error", err)
+	}
+
+	grpcStopped := make(chan struct{})
+	go func() {
+		grpcSrv.GracefulStop()
+		close(grpcStopped)
+	}()
+	select {
+	case <-grpcStopped:
+	case <-shutdownCtx.Done():
+		grpcSrv.Stop()
 	}
 }
 
