@@ -12,6 +12,7 @@ import (
 	"notification-service/internal/scheduler"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -50,11 +51,17 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	go consumer.Start(ctx)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		consumer.Start(ctx)
+	}()
 	sched.Start(ctx)
 	slog.Info("notification-service started")
 
 	<-ctx.Done()
 	slog.Info("notification-service shutting down")
 	sched.Wait()
+	wg.Wait()
 }
