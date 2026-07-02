@@ -1,6 +1,7 @@
 package mailer
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -38,6 +39,12 @@ func (m *Mailer) send(to, subject, body string) error {
 		return fmt.Errorf("mailer: new client: %w", err)
 	}
 	defer client.Close()
+
+	if ok, _ := client.Extension("STARTTLS"); ok {
+		if err := client.StartTLS(&tls.Config{ServerName: m.host}); err != nil {
+			return fmt.Errorf("mailer: start tls: %w", err)
+		}
+	}
 
 	if m.username != "" {
 		auth := smtp.PlainAuth("", m.username, m.password, m.host)

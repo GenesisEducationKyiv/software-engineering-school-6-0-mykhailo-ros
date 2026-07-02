@@ -49,6 +49,7 @@ func (n *Notifier) Run(ctx context.Context) {
 			release, err := n.github.GetLatestRelease(sub.Repo)
 			if err != nil {
 				slog.Error("scheduler: failed to get release", "repo", sub.Repo, "error", err)
+				seen[sub.Repo] = ""
 				continue
 			}
 			tag = release.TagName
@@ -73,15 +74,17 @@ func (n *Notifier) Run(ctx context.Context) {
 type Scheduler struct {
 	job      NotificationJob
 	interval time.Duration
+	done     chan struct{}
 }
 
 func NewScheduler(job NotificationJob, interval time.Duration) *Scheduler {
-	return &Scheduler{job: job, interval: interval}
+	return &Scheduler{job: job, interval: interval, done: make(chan struct{})}
 }
 
 func (s *Scheduler) Start(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	go func() {
+		defer close(s.done)
 		defer ticker.Stop()
 		safeRun := func() {
 			defer func() {
@@ -101,4 +104,10 @@ func (s *Scheduler) Start(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// Wait blocks until the scheduler's background goroutine has exited, so
+// callers can join it before tearing down resources it depends on.
+func (s *Scheduler) Wait() {
+	<-s.done
 }

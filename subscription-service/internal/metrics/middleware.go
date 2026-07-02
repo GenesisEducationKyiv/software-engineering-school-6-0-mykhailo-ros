@@ -13,7 +13,7 @@ func Middleware() gin.HandlerFunc {
 		start := time.Now()
 		path := c.FullPath()
 		if path == "" {
-			path = c.Request.URL.Path
+			path = "unmatched"
 		}
 
 		c.Next()

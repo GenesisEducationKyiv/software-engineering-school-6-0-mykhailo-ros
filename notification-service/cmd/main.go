@@ -47,4 +47,5 @@ func main() {
 
 	<-ctx.Done()
 	slog.Info("notification-service shutting down")
+	sched.Wait()
 }

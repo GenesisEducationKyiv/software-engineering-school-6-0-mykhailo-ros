@@ -59,7 +59,7 @@ func checkResponseStatus(resp *http.Response) error {
 		return nil
 	case http.StatusNotFound:
 		return errLatestReleaseNotFound
-	case http.StatusTooManyRequests:
+	case http.StatusForbidden, http.StatusTooManyRequests:
 		return domain.ErrRateLimited
 	default:
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)

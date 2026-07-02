@@ -38,10 +38,8 @@ func (c *CachingReleaseChecker) GetLatestRelease(repo string) (*domain.Release, 
 		return nil, err
 	}
 
-	if release.TagName != "" {
-		if err := c.cache.Set(key, release.TagName, c.ttl); err != nil {
-			slog.Error("cache: failed to write release", "repo", repo, "error", err)
-		}
+	if err := c.cache.Set(key, release.TagName, c.ttl); err != nil {
+		slog.Error("cache: failed to write release", "repo", repo, "error", err)
 	}
 
 	return release, nil

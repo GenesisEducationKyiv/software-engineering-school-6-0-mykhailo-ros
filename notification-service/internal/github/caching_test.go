@@ -85,14 +85,14 @@ func TestCachingChecker_CacheMiss_PopulatesCache(t *testing.T) {
 	assert.Equal(t, "v1.2.3", cache.data["release:owner/repo"])
 }
 
-func TestCachingChecker_EmptyTagNotCached(t *testing.T) {
+func TestCachingChecker_EmptyTagIsCached(t *testing.T) {
 	cache := newMockCache()
 	inner := &mockReleaseGetter{tag: ""}
 
 	checker := github.NewCachingReleaseChecker(inner, cache, 10*time.Minute)
 	_, err := checker.GetLatestRelease("owner/repo")
 	require.NoError(t, err)
-	assert.Equal(t, 0, cache.setCalls, "empty tag must not be written to cache")
+	assert.Equal(t, 1, cache.setCalls, "empty tag (repo with no releases) must still be cached to avoid repeated GitHub calls")
 }
 
 func TestCachingChecker_SetError_DoesNotFail(t *testing.T) {
