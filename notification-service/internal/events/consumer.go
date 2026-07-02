@@ -19,6 +19,7 @@ type Consumer struct {
 	conn   *amqp.Connection
 	ch     *amqp.Channel
 	mailer Mailer
+	msgs   <-chan amqp.Delivery
 }
 
 func NewConsumer(url string, m Mailer) (*Consumer, error) {
@@ -36,30 +37,33 @@ func NewConsumer(url string, m Mailer) (*Consumer, error) {
 		conn.Close()
 		return nil, fmt.Errorf("events: declare exchange: %w", err)
 	}
-	return &Consumer{conn: conn, ch: ch, mailer: m}, nil
+	q, err := ch.QueueDeclare("", false, true, true, false, nil)
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("events: declare queue: %w", err)
+	}
+	if err := ch.QueueBind(q.Name, "", exchangeName, false, nil); err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("events: bind queue: %w", err)
+	}
+	msgs, err := ch.Consume(q.Name, "", true, true, false, false, nil)
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("events: consume: %w", err)
+	}
+	return &Consumer{conn: conn, ch: ch, mailer: m, msgs: msgs}, nil
 }
 
 func (c *Consumer) Start(ctx context.Context) {
-	q, err := c.ch.QueueDeclare("", false, true, true, false, nil)
-	if err != nil {
-		slog.Error("events: declare queue", "error", err)
-		return
-	}
-	if err := c.ch.QueueBind(q.Name, "", exchangeName, false, nil); err != nil {
-		slog.Error("events: bind queue", "error", err)
-		return
-	}
-	msgs, err := c.ch.Consume(q.Name, "", true, true, false, false, nil)
-	if err != nil {
-		slog.Error("events: consume", "error", err)
-		return
-	}
 	slog.Info("events: consumer started")
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case d, ok := <-msgs:
+		case d, ok := <-c.msgs:
 			if !ok {
 				return
 			}

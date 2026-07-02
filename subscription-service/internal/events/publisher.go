@@ -3,6 +3,8 @@ package events
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -12,6 +14,7 @@ const exchangeName = "subscription.events"
 type Publisher struct {
 	conn *amqp.Connection
 	ch   *amqp.Channel
+	mu   sync.Mutex
 }
 
 func NewPublisher(url string) (*Publisher, error) {
@@ -41,6 +44,9 @@ func (p *Publisher) PublishSubscriptionCreated(email, repo, confirmURL string) e
 	if err != nil {
 		return fmt.Errorf("events: marshal: %w", err)
 	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.ch.Publish(exchangeName, "", false, false, amqp.Publishing{
 		ContentType: "application/json",
 		Body:        body,
@@ -48,6 +54,10 @@ func (p *Publisher) PublishSubscriptionCreated(email, repo, confirmURL string) e
 }
 
 func (p *Publisher) Close() {
-	p.ch.Close()
-	p.conn.Close()
+	if err := p.ch.Close(); err != nil {
+		slog.Warn("events: close channel", "error", err)
+	}
+	if err := p.conn.Close(); err != nil {
+		slog.Warn("events: close connection", "error", err)
+	}
 }
