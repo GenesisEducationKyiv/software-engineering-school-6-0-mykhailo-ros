@@ -36,7 +36,17 @@ func main() {
 	rawGithub := github.NewClient(cfg.GithubToken)
 	cachedGithub := github.NewCachingReleaseChecker(rawGithub, cacheClient, 10*time.Minute)
 	mailerClient := mailer.NewMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom)
-	subscriptionClient := client.NewSubscriptionClient(cfg.SubscriptionServiceURL, cfg.InternalToken)
+	grpcClient, err := client.NewGRPCClient(cfg.SubscriptionServiceGRPCAddr, cfg.InternalToken)
+	if err != nil {
+		slog.Error("failed to connect to subscription-service grpc", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := grpcClient.Close(); err != nil {
+			slog.Warn("failed to close grpc client", "error", err)
+		}
+	}()
+	var subscriptionClient client.SubscriptionClient = grpcClient
 
 	consumer, err := events.NewConsumer(cfg.RabbitMQURL, mailerClient)
 	if err != nil {

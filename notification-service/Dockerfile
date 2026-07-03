@@ -1,11 +1,15 @@
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
-COPY go.mod go.sum ./
+COPY gen/ gen/
+COPY notification-service/go.mod notification-service/go.sum notification-service/
+WORKDIR /app/notification-service
 RUN go mod download
-COPY . .
+WORKDIR /app
+COPY notification-service/ notification-service/
+WORKDIR /app/notification-service
 RUN go build -o main ./cmd/main.go
 
 FROM alpine:latest
 WORKDIR /app
-COPY --from=builder /app/main .
+COPY --from=builder /app/notification-service/main .
 CMD ["./main"]

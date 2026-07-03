@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package subscription.v1;
+
+option go_package = "github-release-notifier/gen/subscription/v1;subscriptionv1";
+
+service SubscriptionService {
+  rpc ListConfirmedSubscriptions(ListConfirmedSubscriptionsRequest) returns (ListConfirmedSubscriptionsResponse);
+  rpc UpdateLastSeenTag(UpdateLastSeenTagRequest) returns (UpdateLastSeenTagResponse);
+}
+
+message ListConfirmedSubscriptionsRequest {}
+
+message Subscription {
+  int64  id            = 1;
+  string email         = 2;
+  string repo          = 3;
+  string last_seen_tag = 4;
+}
+
+message ListConfirmedSubscriptionsResponse {
+  repeated Subscription subscriptions = 1;
+}
+
+message UpdateLastSeenTagRequest {
+  int64  id            = 1;
+  string last_seen_tag = 2;
+}
+
+message UpdateLastSeenTagResponse {}
