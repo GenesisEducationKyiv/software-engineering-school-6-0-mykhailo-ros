@@ -150,13 +150,13 @@ func newReplyConsumer(url string) (*replyConsumerHandle, string, error) {
 	}
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, "", fmt.Errorf("reply queue: channel: %w", err)
 	}
 	q, err := ch.QueueDeclare("", false, true, true, false, nil)
 	if err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, "", fmt.Errorf("reply queue: declare: %w", err)
 	}
 	return &replyConsumerHandle{conn: conn, ch: ch, name: q.Name}, q.Name, nil
@@ -167,6 +167,10 @@ func (rc *replyConsumerHandle) consume() (<-chan amqp.Delivery, error) {
 }
 
 func (rc *replyConsumerHandle) close() {
-	rc.ch.Close()
-	rc.conn.Close()
+	if err := rc.ch.Close(); err != nil {
+		slog.Warn("reply queue: close channel", "error", err)
+	}
+	if err := rc.conn.Close(); err != nil {
+		slog.Warn("reply queue: close connection", "error", err)
+	}
 }

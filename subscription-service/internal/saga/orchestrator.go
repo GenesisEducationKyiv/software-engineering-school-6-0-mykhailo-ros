@@ -94,7 +94,7 @@ func (o *Orchestrator) Execute(ctx context.Context, email, repo, confirmToken, u
 		return fmt.Errorf("saga: publish command: %w", err)
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
 
 	select {
