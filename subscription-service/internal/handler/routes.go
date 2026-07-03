@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"regexp"
@@ -15,7 +16,7 @@ import (
 var emailRegexp = regexp.MustCompile(`^[^@]+@[^@]+\.[^@]+$`)
 
 type SubscriptionService interface {
-	Subscribe(email, repo string) error
+	Subscribe(ctx context.Context, email, repo string) error
 	Confirm(token string) error
 	Unsubscribe(token string) error
 	GetSubscriptions(email string) ([]domain.Subscription, error)
@@ -61,7 +62,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Subscribe(email, repo)
+	err := h.service.Subscribe(c.Request.Context(), email, repo)
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "subscription created, check your email"})
 		return

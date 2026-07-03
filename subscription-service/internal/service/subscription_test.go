@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -16,12 +17,12 @@ func (m *mockGithub) RepoExists(repo string) (bool, error) {
 	return m.exists, m.err
 }
 
-type mockPublisher struct {
+type mockOrchestrator struct {
 	called bool
 	err    error
 }
 
-func (m *mockPublisher) PublishSubscriptionCreated(email, repo, confirmURL string) error {
+func (m *mockOrchestrator) Execute(ctx context.Context, email, repo, confirmToken, unsubscribeToken, confirmURL string) error {
 	m.called = true
 	return m.err
 }
@@ -29,13 +30,8 @@ func (m *mockPublisher) PublishSubscriptionCreated(email, repo, confirmURL strin
 type mockRepo struct {
 	subscription  *domain.Subscription
 	subscriptions []domain.Subscription
-	createErr     error
 	confirmErr    error
 	deleteErr     error
-}
-
-func (m *mockRepo) Create(email, repo, confirmToken, unsubscribeToken string) error {
-	return m.createErr
 }
 
 func (m *mockRepo) FindByConfirmToken(token string) (*domain.Subscription, error) {
@@ -64,16 +60,15 @@ func (m *mockRepo) FindByEmail(email string) ([]domain.Subscription, error) {
 	return m.subscriptions, nil
 }
 
-
 func TestSubscribe_Success(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{},
 		&mockGithub{exists: true},
-		&mockPublisher{},
+		&mockOrchestrator{},
 		"",
 	)
 
-	if err := svc.Subscribe("test@test.com", "golang/go"); err != nil {
+	if err := svc.Subscribe(context.Background(), "test@test.com", "golang/go"); err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 }
@@ -82,11 +77,11 @@ func TestSubscribe_RepoNotFound(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{},
 		&mockGithub{exists: false},
-		&mockPublisher{},
+		&mockOrchestrator{},
 		"",
 	)
 
-	err := svc.Subscribe("test@test.com", "golang/go")
+	err := svc.Subscribe(context.Background(), "test@test.com", "golang/go")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -96,11 +91,11 @@ func TestSubscribe_GithubError(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{},
 		&mockGithub{err: fmt.Errorf("rate limit exceeded")},
-		&mockPublisher{},
+		&mockOrchestrator{},
 		"",
 	)
 
-	err := svc.Subscribe("test@test.com", "golang/go")
+	err := svc.Subscribe(context.Background(), "test@test.com", "golang/go")
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -110,7 +105,7 @@ func TestConfirm_Success(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
-		&mockPublisher{},
+		&mockOrchestrator{},
 		"",
 	)
 
@@ -123,7 +118,7 @@ func TestConfirm_TokenNotFound(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: nil},
 		&mockGithub{},
-		&mockPublisher{},
+		&mockOrchestrator{},
 		"",
 	)
 
@@ -137,7 +132,7 @@ func TestUnsubscribe_Success(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
-		&mockPublisher{},
+		&mockOrchestrator{},
 		"",
 	)
 
@@ -150,7 +145,7 @@ func TestUnsubscribe_TokenNotFound(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{subscription: nil},
 		&mockGithub{},
-		&mockPublisher{},
+		&mockOrchestrator{},
 		"",
 	)
 

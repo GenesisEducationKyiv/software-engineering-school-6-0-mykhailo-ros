@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -11,12 +12,11 @@ type GithubClient interface {
 	RepoExists(repo string) (bool, error)
 }
 
-type EventPublisher interface {
-	PublishSubscriptionCreated(email, repo, confirmURL string) error
+type SagaOrchestrator interface {
+	Execute(ctx context.Context, email, repo, confirmToken, unsubscribeToken, confirmURL string) error
 }
 
 type SubscriptionRepository interface {
-	Create(email, repo, confirmToken, unsubscribeToken string) error
 	FindByConfirmToken(token string) (*domain.Subscription, error)
 	FindByUnsubscribeToken(token string) (*domain.Subscription, error)
 	Confirm(token string) error
@@ -25,17 +25,17 @@ type SubscriptionRepository interface {
 }
 
 type Subscription struct {
-	repo      SubscriptionRepository
-	github    GithubClient
-	publisher EventPublisher
-	baseURL   string
+	repo         SubscriptionRepository
+	github       GithubClient
+	orchestrator SagaOrchestrator
+	baseURL      string
 }
 
-func NewSubscription(repo SubscriptionRepository, github GithubClient, publisher EventPublisher, baseURL string) *Subscription {
-	return &Subscription{repo: repo, github: github, publisher: publisher, baseURL: baseURL}
+func NewSubscription(repo SubscriptionRepository, github GithubClient, orchestrator SagaOrchestrator, baseURL string) *Subscription {
+	return &Subscription{repo: repo, github: github, orchestrator: orchestrator, baseURL: baseURL}
 }
 
-func (s *Subscription) Subscribe(email, repo string) error {
+func (s *Subscription) Subscribe(ctx context.Context, email, repo string) error {
 	exists, err := s.github.RepoExists(repo)
 	if err != nil {
 		return fmt.Errorf("github: %w", err)
@@ -52,13 +52,9 @@ func (s *Subscription) Subscribe(email, repo string) error {
 	if err != nil {
 		return err
 	}
-	err = s.repo.Create(email, repo, confirmToken, unsubscribeToken)
-	if err != nil {
-		return err
-	}
 
 	confirmURL := fmt.Sprintf("%s/api/confirm/%s", s.baseURL, confirmToken)
-	return s.publisher.PublishSubscriptionCreated(email, repo, confirmURL)
+	return s.orchestrator.Execute(ctx, email, repo, confirmToken, unsubscribeToken, confirmURL)
 }
 
 func (s *Subscription) Confirm(token string) error {

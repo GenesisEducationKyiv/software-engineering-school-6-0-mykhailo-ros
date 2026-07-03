@@ -9,7 +9,13 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const exchangeName = "subscription.events"
+const (
+	sagaExchange   = "saga.commands"
+	commandRouting = "send-confirmation-email"
+
+	replyEmailSent   = "confirmation-email-sent"
+	replyEmailFailed = "confirmation-email-failed"
+)
 
 type Mailer interface {
 	SendConfirmation(to, repo, confirmURL string) error
@@ -32,7 +38,7 @@ func NewConsumer(url string, m Mailer) (*Consumer, error) {
 		_ = conn.Close()
 		return nil, fmt.Errorf("events: channel: %w", err)
 	}
-	if err := ch.ExchangeDeclare(exchangeName, "fanout", true, false, false, false, nil); err != nil {
+	if err := ch.ExchangeDeclare(sagaExchange, "direct", true, false, false, false, nil); err != nil {
 		_ = ch.Close()
 		_ = conn.Close()
 		return nil, fmt.Errorf("events: declare exchange: %w", err)
@@ -43,12 +49,12 @@ func NewConsumer(url string, m Mailer) (*Consumer, error) {
 		_ = conn.Close()
 		return nil, fmt.Errorf("events: declare queue: %w", err)
 	}
-	if err := ch.QueueBind(q.Name, "", exchangeName, false, nil); err != nil {
+	if err := ch.QueueBind(q.Name, commandRouting, sagaExchange, false, nil); err != nil {
 		_ = ch.Close()
 		_ = conn.Close()
 		return nil, fmt.Errorf("events: bind queue: %w", err)
 	}
-	msgs, err := ch.Consume(q.Name, "", true, true, false, false, nil)
+	msgs, err := ch.Consume(q.Name, "", false, true, false, false, nil)
 	if err != nil {
 		_ = ch.Close()
 		_ = conn.Close()
@@ -67,8 +73,23 @@ func (c *Consumer) Start(ctx context.Context) {
 			if !ok {
 				return
 			}
+			reply := replyEmailSent
 			if err := c.handle(d.Body); err != nil {
-				slog.Error("events: handle message", "error", err)
+				slog.Error("events: handle command", "error", err)
+				reply = replyEmailFailed
+			}
+			if err := c.ch.Publish("", d.ReplyTo, false, false, amqp.Publishing{
+				CorrelationId: d.CorrelationId,
+				Body:          []byte(reply),
+			}); err != nil {
+				slog.Error("events: publish reply", "error", err)
+				if nackErr := d.Nack(false, false); nackErr != nil {
+					slog.Error("events: nack message", "error", nackErr)
+				}
+				continue
+			}
+			if err := d.Ack(false); err != nil {
+				slog.Error("events: ack message", "error", err)
 			}
 		}
 	}
