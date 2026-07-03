@@ -2,14 +2,13 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
-	"github-release-notifier/internal/repository"
+	"github-release-notifier/internal/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +17,7 @@ type mockService struct {
 	subscribeErr   error
 	confirmErr     error
 	unsubscribeErr error
-	subscriptions  []repository.Subscription
+	subscriptions  []domain.Subscription
 }
 
 func (m *mockService) Subscribe(email, repo string) error {
@@ -33,7 +32,7 @@ func (m *mockService) Unsubscribe(token string) error {
 	return m.unsubscribeErr
 }
 
-func (m *mockService) GetSubscriptions(email string) ([]repository.Subscription, error) {
+func (m *mockService) GetSubscriptions(email string) ([]domain.Subscription, error) {
 	return m.subscriptions, nil
 }
 
@@ -103,7 +102,7 @@ func TestSubscribeHandler_InvalidRepo(t *testing.T) {
 }
 
 func TestSubscribeHandler_RepoNotFound(t *testing.T) {
-	r := setupRouter(&mockService{subscribeErr: fmt.Errorf("repo not found")})
+	r := setupRouter(&mockService{subscribeErr: domain.ErrRepoNotFound})
 
 	form := url.Values{}
 	form.Set("email", "test@test.com")
@@ -148,7 +147,7 @@ func TestConfirmHandler_InvalidToken(t *testing.T) {
 }
 
 func TestConfirmHandler_TokenNotFound(t *testing.T) {
-	r := setupRouter(&mockService{confirmErr: fmt.Errorf("token not found")})
+	r := setupRouter(&mockService{confirmErr: domain.ErrNotFound})
 	token := strings.Repeat("a", 32)
 
 	req := httptest.NewRequest("GET", "/api/confirm/"+token, nil)
@@ -162,7 +161,7 @@ func TestConfirmHandler_TokenNotFound(t *testing.T) {
 }
 
 func TestGetSubscriptionsHandler_Success(t *testing.T) {
-	subs := []repository.Subscription{{Email: "test@test.com", Repo: "golang/go", Confirmed: true}}
+	subs := []domain.Subscription{{Email: "test@test.com", Repo: "golang/go", Confirmed: true}}
 	r := setupRouter(&mockService{subscriptions: subs})
 
 	req := httptest.NewRequest("GET", "/api/subscriptions?email=test@test.com", nil)

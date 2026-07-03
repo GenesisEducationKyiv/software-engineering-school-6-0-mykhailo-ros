@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -11,13 +10,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func Connect() (*sql.DB, error) {
+func Connect(host, port, user, password, dbname string) (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
+		host, port, user, password, dbname,
 	)
 
 	db, err := sql.Open("postgres", dsn)

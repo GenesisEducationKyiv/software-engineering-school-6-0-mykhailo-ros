@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github-release-notifier/internal/repository"
+	"github-release-notifier/internal/domain"
 )
 
 type mockGithub struct {
@@ -17,9 +17,8 @@ func (m *mockGithub) RepoExists(repo string) (bool, error) {
 }
 
 type mockMailer struct {
-	confirmCalled      bool
-	notificationCalled bool
-	err                error
+	confirmCalled bool
+	err           error
 }
 
 func (m *mockMailer) SendConfirmation(to, repo, confirmURL string) error {
@@ -27,14 +26,9 @@ func (m *mockMailer) SendConfirmation(to, repo, confirmURL string) error {
 	return m.err
 }
 
-func (m *mockMailer) SendReleaseNotification(to, repo, tag string) error {
-	m.notificationCalled = true
-	return m.err
-}
-
 type mockRepo struct {
-	subscription  *repository.Subscription
-	subscriptions []repository.Subscription
+	subscription  *domain.Subscription
+	subscriptions []domain.Subscription
 	createErr     error
 	confirmErr    error
 	deleteErr     error
@@ -44,16 +38,16 @@ func (m *mockRepo) Create(email, repo, confirmToken, unsubscribeToken string) er
 	return m.createErr
 }
 
-func (m *mockRepo) FindByConfirmToken(token string) (*repository.Subscription, error) {
+func (m *mockRepo) FindByConfirmToken(token string) (*domain.Subscription, error) {
 	if m.subscription == nil {
-		return nil, repository.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return m.subscription, nil
 }
 
-func (m *mockRepo) FindByUnsubscribeToken(token string) (*repository.Subscription, error) {
+func (m *mockRepo) FindByUnsubscribeToken(token string) (*domain.Subscription, error) {
 	if m.subscription == nil {
-		return nil, repository.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return m.subscription, nil
 }
@@ -66,23 +60,17 @@ func (m *mockRepo) DeleteByUnsubscribeToken(token string) error {
 	return m.deleteErr
 }
 
-func (m *mockRepo) FindByEmail(email string) ([]repository.Subscription, error) {
+func (m *mockRepo) FindByEmail(email string) ([]domain.Subscription, error) {
 	return m.subscriptions, nil
 }
 
-func (m *mockRepo) FindAllConfirmed() ([]repository.Subscription, error) {
-	return m.subscriptions, nil
-}
-
-func (m *mockRepo) UpdateLastSeenTag(id int, tag string) error {
-	return nil
-}
 
 func TestSubscribe_Success(t *testing.T) {
 	svc := NewSubscription(
 		&mockRepo{},
 		&mockGithub{exists: true},
 		&mockMailer{},
+		"",
 	)
 
 	if err := svc.Subscribe("test@test.com", "golang/go"); err != nil {
@@ -95,6 +83,7 @@ func TestSubscribe_RepoNotFound(t *testing.T) {
 		&mockRepo{},
 		&mockGithub{exists: false},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Subscribe("test@test.com", "golang/go")
@@ -108,6 +97,7 @@ func TestSubscribe_GithubError(t *testing.T) {
 		&mockRepo{},
 		&mockGithub{err: fmt.Errorf("rate limit exceeded")},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Subscribe("test@test.com", "golang/go")
@@ -118,9 +108,10 @@ func TestSubscribe_GithubError(t *testing.T) {
 
 func TestConfirm_Success(t *testing.T) {
 	svc := NewSubscription(
-		&mockRepo{subscription: &repository.Subscription{ID: 1}},
+		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	if err := svc.Confirm("valid-token"); err != nil {
@@ -133,6 +124,7 @@ func TestConfirm_TokenNotFound(t *testing.T) {
 		&mockRepo{subscription: nil},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Confirm("invalid-token")
@@ -143,9 +135,10 @@ func TestConfirm_TokenNotFound(t *testing.T) {
 
 func TestUnsubscribe_Success(t *testing.T) {
 	svc := NewSubscription(
-		&mockRepo{subscription: &repository.Subscription{ID: 1}},
+		&mockRepo{subscription: &domain.Subscription{ID: 1}},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	if err := svc.Unsubscribe("valid-token"); err != nil {
@@ -158,6 +151,7 @@ func TestUnsubscribe_TokenNotFound(t *testing.T) {
 		&mockRepo{subscription: nil},
 		&mockGithub{},
 		&mockMailer{},
+		"",
 	)
 
 	err := svc.Unsubscribe("invalid-token")

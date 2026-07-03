@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github-release-notifier/internal/cache"
 	"github-release-notifier/internal/db"
 	"github-release-notifier/internal/github"
@@ -11,6 +12,8 @@ import (
 	"github-release-notifier/internal/service"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +24,13 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file, using environment variables")
 	}
-	database, err := db.Connect()
+	database, err := db.Connect(
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
 	}
@@ -40,12 +49,22 @@ func main() {
 	repo := repository.NewSubscriptionRepo(database)
 	cacheClient := cache.NewCache()
 	githubClient := github.NewClient(os.Getenv("GITHUB_TOKEN"), cacheClient)
-	mailerClient := mailer.NewMailer()
+	mailerClient := mailer.NewMailer(
+		os.Getenv("SMTP_HOST"),
+		os.Getenv("SMTP_PORT"),
+		os.Getenv("SMTP_USERNAME"),
+		os.Getenv("SMTP_PASSWORD"),
+		os.Getenv("SMTP_FROM"),
+	)
 
-	svc := service.NewSubscription(repo, githubClient, mailerClient)
+	svc := service.NewSubscription(repo, githubClient, mailerClient, os.Getenv("BASE_URL"))
 	h := handler.NewSubscriptionHandler(svc)
-	scheduler := scheduler.NewScheduler(repo, githubClient, mailerClient, 10*time.Minute)
-	scheduler.Start()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	notifier := scheduler.NewNotifier(repo, githubClient, mailerClient)
+	sched := scheduler.NewScheduler(notifier, 10*time.Minute)
+	sched.Start(ctx)
 
 	r := gin.Default()
 	r.POST("/api/subscribe", h.Subscribe)

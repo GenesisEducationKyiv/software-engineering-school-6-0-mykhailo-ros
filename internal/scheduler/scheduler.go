@@ -1,29 +1,43 @@
 package scheduler
 
 import (
-	"errors"
-	"github-release-notifier/internal/github"
-	"github-release-notifier/internal/mailer"
-	"github-release-notifier/internal/repository"
+	"context"
+	"github-release-notifier/internal/domain"
 	"log"
 	"time"
 )
 
-type Scheduler struct {
-	repo     *repository.SubscriptionRepo
-	github   *github.Client
-	mailer   *mailer.Mailer
-	interval time.Duration
+type NotificationStore interface {
+	FindAllConfirmed() ([]domain.Subscription, error)
+	UpdateLastSeenTag(id int, tag string) error
 }
 
-func NewScheduler(repo *repository.SubscriptionRepo, github *github.Client, mailer *mailer.Mailer, interval time.Duration) *Scheduler {
-	return &Scheduler{repo: repo, github: github, mailer: mailer, interval: interval}
+type ReleaseChecker interface {
+	GetLatestRelease(repo string) (*domain.Release, error)
 }
 
-func (s *Scheduler) checkAndNotify() {
-	subs, err := s.repo.FindAllConfirmed()
+type NotificationSender interface {
+	SendReleaseNotification(to, repo, tag string) error
+}
+
+type NotificationJob interface {
+	Run()
+}
+
+type Notifier struct {
+	repo   NotificationStore
+	github ReleaseChecker
+	mailer NotificationSender
+}
+
+func NewNotifier(repo NotificationStore, github ReleaseChecker, mailer NotificationSender) *Notifier {
+	return &Notifier{repo: repo, github: github, mailer: mailer}
+}
+
+func (n *Notifier) Run() {
+	subs, err := n.repo.FindAllConfirmed()
 	if err != nil {
-		log.Printf("scheduler: failed to fetch subscription: %v", err)
+		log.Printf("scheduler: failed to fetch subscriptions: %v", err)
 		return
 	}
 
@@ -32,11 +46,7 @@ func (s *Scheduler) checkAndNotify() {
 	for _, sub := range subs {
 		tag, ok := seen[sub.Repo]
 		if !ok {
-			release, err := s.github.GetLatestRelease(sub.Repo)
-			if errors.Is(err, github.ErrRepoNotFound) {
-				seen[sub.Repo] = ""
-				continue
-			}
+			release, err := n.github.GetLatestRelease(sub.Repo)
 			if err != nil {
 				log.Printf("scheduler: failed to get release for %s: %v", sub.Repo, err)
 				continue
@@ -49,22 +59,46 @@ func (s *Scheduler) checkAndNotify() {
 			continue
 		}
 
-		if err := s.mailer.SendReleaseNotification(sub.Email, sub.Repo, tag); err != nil {
+		if err := n.mailer.SendReleaseNotification(sub.Email, sub.Repo, tag); err != nil {
 			log.Printf("scheduler: failed to send email to %s: %v", sub.Email, err)
 			continue
 		}
 
-		if err := s.repo.UpdateLastSeenTag(sub.ID, tag); err != nil {
+		if err := n.repo.UpdateLastSeenTag(sub.ID, tag); err != nil {
 			log.Printf("scheduler: failed to update last_seen_tag for %s: %v", sub.Email, err)
 		}
 	}
 }
 
-func (s *Scheduler) Start() {
+type Scheduler struct {
+	job      NotificationJob
+	interval time.Duration
+}
+
+func NewScheduler(job NotificationJob, interval time.Duration) *Scheduler {
+	return &Scheduler{job: job, interval: interval}
+}
+
+func (s *Scheduler) Start(ctx context.Context) {
+	ticker := time.NewTicker(s.interval)
 	go func() {
+		defer ticker.Stop()
+		safeRun := func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("scheduler: panic in job: %v", r)
+				}
+			}()
+			s.job.Run()
+		}
+		safeRun()
 		for {
-			s.checkAndNotify()
-			time.Sleep(s.interval)
+			select {
+			case <-ticker.C:
+				safeRun()
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 }

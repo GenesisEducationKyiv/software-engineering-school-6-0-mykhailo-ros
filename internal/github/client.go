@@ -9,27 +9,28 @@ import (
 	"strings"
 	"time"
 
-	"github-release-notifier/internal/cache"
+	"github-release-notifier/internal/domain"
 )
 
-var ErrRepoNotFound = errors.New("repository not found")
+type Cache interface {
+	Get(key string) (string, error)
+	Set(key, value string, ttl time.Duration) error
+}
+
+var errLatestReleaseNotFound = errors.New("latest release not found")
 
 type Client struct {
 	httpClient *http.Client
 	token      string
-	cache      *cache.Cache
+	cache      Cache
 }
 
-func NewClient(token string, cache *cache.Cache) *Client {
+func NewClient(token string, cache Cache) *Client {
 	return &Client{
 		httpClient: &http.Client{},
 		token:      token,
 		cache:      cache,
 	}
-}
-
-type Release struct {
-	TagName string `json:"tag_name"`
 }
 
 func (c *Client) sendRequest(url string) (*http.Response, error) {
@@ -48,9 +49,9 @@ func checkResponseStatus(resp *http.Response) error {
 	case http.StatusOK:
 		return nil
 	case http.StatusNotFound:
-		return ErrRepoNotFound
+		return errLatestReleaseNotFound
 	case http.StatusTooManyRequests:
-		return fmt.Errorf("github rate limit exceeded")
+		return domain.ErrRateLimited
 	default:
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
@@ -73,7 +74,7 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 	}()
 
 	if err := checkResponseStatus(resp); err != nil {
-		if errors.Is(err, ErrRepoNotFound) {
+		if errors.Is(err, errLatestReleaseNotFound) {
 			return false, nil
 		}
 		return false, err
@@ -81,12 +82,12 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 	return true, nil
 }
 
-func (c *Client) GetLatestRelease(repo string) (*Release, error) {
+func (c *Client) GetLatestRelease(repo string) (*domain.Release, error) {
 	cacheKey := "release:" + repo
 
 	if c.cache != nil {
 		if cached, err := c.cache.Get(cacheKey); err == nil {
-			return &Release{TagName: cached}, nil
+			return &domain.Release{TagName: cached}, nil
 		}
 	}
 
@@ -101,10 +102,13 @@ func (c *Client) GetLatestRelease(repo string) (*Release, error) {
 	}()
 
 	if err := checkResponseStatus(resp); err != nil {
+		if errors.Is(err, errLatestReleaseNotFound) {
+			return &domain.Release{}, nil
+		}
 		return nil, err
 	}
 
-	var release Release
+	var release domain.Release
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, err
 	}
