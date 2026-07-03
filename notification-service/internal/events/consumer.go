@@ -29,29 +29,29 @@ func NewConsumer(url string, m Mailer) (*Consumer, error) {
 	}
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("events: channel: %w", err)
 	}
 	if err := ch.ExchangeDeclare(exchangeName, "fanout", true, false, false, false, nil); err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("events: declare exchange: %w", err)
 	}
 	q, err := ch.QueueDeclare("", false, true, true, false, nil)
 	if err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("events: declare queue: %w", err)
 	}
 	if err := ch.QueueBind(q.Name, "", exchangeName, false, nil); err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("events: bind queue: %w", err)
 	}
 	msgs, err := ch.Consume(q.Name, "", true, true, false, false, nil)
 	if err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("events: consume: %w", err)
 	}
 	return &Consumer{conn: conn, ch: ch, mailer: m, msgs: msgs}, nil
@@ -87,6 +87,10 @@ func (c *Consumer) handle(body []byte) error {
 }
 
 func (c *Consumer) Close() {
-	c.ch.Close()
-	c.conn.Close()
+	if err := c.ch.Close(); err != nil {
+		slog.Warn("events: close channel", "error", err)
+	}
+	if err := c.conn.Close(); err != nil {
+		slog.Warn("events: close connection", "error", err)
+	}
 }

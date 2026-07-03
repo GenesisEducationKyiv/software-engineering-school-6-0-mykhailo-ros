@@ -24,12 +24,12 @@ func NewPublisher(url string) (*Publisher, error) {
 	}
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("events: channel: %w", err)
 	}
 	if err := ch.ExchangeDeclare(exchangeName, "fanout", true, false, false, false, nil); err != nil {
-		ch.Close()
-		conn.Close()
+		_ = ch.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("events: declare exchange: %w", err)
 	}
 	return &Publisher{conn: conn, ch: ch}, nil
