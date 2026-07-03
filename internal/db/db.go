@@ -1,8 +1,11 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -17,11 +20,13 @@ func Connect(host, port, user, password, dbname string) (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open postgres: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, err
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 
 	return db, nil
@@ -38,9 +43,12 @@ func RunMigrations(db *sql.DB) error {
 		return err
 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 
+	// Deliberately not calling m.Close(): migrate's postgres driver Close()
+	// also closes the underlying *sql.DB (WithInstance shares it), but the
+	// caller keeps using that connection for the lifetime of the process.
 	return nil
 }

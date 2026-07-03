@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -23,7 +24,7 @@ type Client struct {
 
 func NewClient(token string) *Client {
 	if token == "" {
-		log.Println("github: no token configured, unauthenticated rate limit is 60 req/hour")
+		slog.Warn("github: no token configured, unauthenticated rate limit is 60 req/hour")
 	}
 	return &Client{
 		httpClient: &http.Client{},
@@ -59,7 +60,7 @@ func checkResponseStatus(resp *http.Response) error {
 		return nil
 	case http.StatusNotFound:
 		return errLatestReleaseNotFound
-	case http.StatusTooManyRequests:
+	case http.StatusForbidden, http.StatusTooManyRequests:
 		return domain.ErrRateLimited
 	default:
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -78,7 +79,7 @@ func (c *Client) RepoExists(repo string) (bool, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+			slog.Error("failed to close response body", "error", err)
 		}
 	}()
 
@@ -98,7 +99,7 @@ func (c *Client) GetLatestRelease(repo string) (*domain.Release, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+			slog.Error("failed to close response body", "error", err)
 		}
 	}()
 
@@ -110,7 +111,7 @@ func (c *Client) GetLatestRelease(repo string) (*domain.Release, error) {
 	}
 
 	var release domain.Release
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&release); err != nil {
 		return nil, err
 	}
 

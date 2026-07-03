@@ -1,7 +1,7 @@
 package github
 
 import (
-	"log"
+	"log/slog"
 	"time"
 
 	"github-release-notifier/internal/domain"
@@ -40,7 +40,7 @@ func (c *CachingReleaseChecker) GetLatestRelease(repo string) (*domain.Release, 
 
 	if release.TagName != "" {
 		if err := c.cache.Set(key, release.TagName, c.ttl); err != nil {
-			log.Printf("cache: failed to write release for %s: %v", repo, err)
+			slog.Error("cache: failed to write release", "repo", repo, "error", err)
 		}
 	}
 

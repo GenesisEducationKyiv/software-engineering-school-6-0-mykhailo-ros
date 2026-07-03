@@ -3,7 +3,7 @@ package scheduler
 import (
 	"context"
 	"github-release-notifier/internal/domain"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -37,7 +37,7 @@ func NewNotifier(repo NotificationStore, github ReleaseChecker, mailer Notificat
 func (n *Notifier) Run() {
 	subs, err := n.repo.FindAllConfirmed()
 	if err != nil {
-		log.Printf("scheduler: failed to fetch subscriptions: %v", err)
+		slog.Error("scheduler: failed to fetch subscriptions", "error", err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (n *Notifier) Run() {
 		if !ok {
 			release, err := n.github.GetLatestRelease(sub.Repo)
 			if err != nil {
-				log.Printf("scheduler: failed to get release for %s: %v", sub.Repo, err)
+				slog.Error("scheduler: failed to get release", "repo", sub.Repo, "error", err)
 				continue
 			}
 			tag = release.TagName
@@ -60,12 +60,12 @@ func (n *Notifier) Run() {
 		}
 
 		if err := n.mailer.SendReleaseNotification(sub.Email, sub.Repo, tag); err != nil {
-			log.Printf("scheduler: failed to send email to %s: %v", sub.Email, err)
+			slog.Error("scheduler: failed to send email", "email", sub.Email, "error", err)
 			continue
 		}
 
 		if err := n.repo.UpdateLastSeenTag(sub.ID, tag); err != nil {
-			log.Printf("scheduler: failed to update last_seen_tag for %s: %v", sub.Email, err)
+			slog.Error("scheduler: failed to update last_seen_tag", "email", sub.Email, "error", err)
 		}
 	}
 }
@@ -86,7 +86,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 		safeRun := func() {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("scheduler: panic in job: %v", r)
+					slog.Error("scheduler: panic in job", "error", r)
 				}
 			}()
 			s.job.Run()
