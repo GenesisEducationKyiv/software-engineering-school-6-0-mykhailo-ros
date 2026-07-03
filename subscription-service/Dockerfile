@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.25-alpine AS builder
 WORKDIR /app
 COPY gen/ gen/
 COPY subscription-service/go.mod subscription-service/go.sum subscription-service/

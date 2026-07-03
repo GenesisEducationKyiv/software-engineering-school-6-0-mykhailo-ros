@@ -1,6 +1,6 @@
 module subscription-service
 
-go 1.26.4
+go 1.25.0
 
 require (
 	github-release-notifier/gen v0.0.0-00010101000000-000000000000
