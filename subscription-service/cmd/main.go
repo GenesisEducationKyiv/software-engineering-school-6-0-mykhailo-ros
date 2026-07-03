@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"subscription-service/internal/config"
 	"subscription-service/internal/db"
+	"subscription-service/internal/events"
 	"subscription-service/internal/github"
 	"subscription-service/internal/handler"
-	"subscription-service/internal/mailer"
 	"subscription-service/internal/metrics"
 	"subscription-service/internal/repository"
 	"subscription-service/internal/service"
@@ -59,9 +59,15 @@ func main() {
 
 	repo := repository.NewSubscriptionRepo(database)
 	rawGithub := github.NewClient(cfg.GithubToken)
-	mailerClient := mailer.NewMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom)
 
-	svc := service.NewSubscription(repo, rawGithub, mailerClient, cfg.BaseURL)
+	publisher, err := events.NewPublisher(cfg.RabbitMQURL)
+	if err != nil {
+		slog.Error("failed to connect to RabbitMQ", "error", err)
+		os.Exit(1)
+	}
+	defer publisher.Close()
+
+	svc := service.NewSubscription(repo, rawGithub, publisher, cfg.BaseURL)
 	h := handler.NewSubscriptionHandler(svc)
 	ih := handler.NewInternalHandler(repo)
 
