@@ -95,4 +95,35 @@ go test ./...
 
 Unit tests cover most of the service and handler layers. Which is exactly the core business logic of the API. 
 
+## 7. gRPC vs REST benchmark
+
+The internal call from `notification-service` to `subscription-service` (listing confirmed
+subscriptions) is available over both REST and gRPC. Benchmarked with `ghz` (gRPC) and
+`autocannon` (REST), both `-n 1000 -c 10` against the same running docker-compose stack and the
+same `ListConfirmedSubscriptions` data:
+
+```bash
+ghz --insecure \
+    --proto proto/subscription/v1/subscription.proto \
+    --import-paths proto \
+    --call subscription.v1.SubscriptionService.ListConfirmedSubscriptions \
+    -d '{}' -m '{"x-internal-token":"internal-secret"}' \
+    -n 1000 -c 10 localhost:9091
+
+npx autocannon -a 1000 -c 10 -H "X-Internal-Token=internal-secret" http://localhost:8080/internal/subscriptions
+```
+
+| Metric | gRPC | REST |
+|---|---|---|
+| Requests/sec (avg) | 870.97 | ~500 |
+| Avg latency | 10.96 ms | 14.72 ms |
+| p50 latency | 5.54 ms | 6 ms |
+| p95/p97.5 latency | 30.21 ms | 57 ms |
+| p99 latency | 38.50 ms | 63 ms |
+
+gRPC came out ahead on both throughput and tail latency in this run — expected given HTTP/2
+multiplexing and protobuf's binary encoding versus REST's per-request JSON (de)serialization
+over HTTP/1.1. Not a rigorous benchmark (single run, local machine, small dataset), but consistent
+with the general tradeoff between the two transports.
+
 
