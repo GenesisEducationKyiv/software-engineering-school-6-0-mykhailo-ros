@@ -10,21 +10,28 @@ jobs:
   unit:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        module: [".", "subscription-service", "notification-service"]
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: ${{ matrix.module }}/go.mod
 
       - name: Download dependencies
+        working-directory: ${{ matrix.module }}
         run: go mod download
 
       - name: Run linter
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.4.0
+          working-directory: ${{ matrix.module }}
 
       - name: Run unit tests
+        working-directory: ${{ matrix.module }}
         run: go test ./...

@@ -82,8 +82,8 @@ services:
     depends_on:
       - prometheus
 
-  app:
-    build: .
+  subscription-service:
+    build: ./subscription-service
     ports:
       - "8080:8080"
     logging:
@@ -106,11 +106,9 @@ services:
       SMTP_FROM: ${SMTP_FROM:-noreply@github-notifier.com}
       BASE_URL: ${BASE_URL:-http://localhost:8080}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-internal-secret}
     depends_on:
       db:
-        condition: service_healthy
-      logstash:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 8080 || exit 1"]
@@ -118,6 +116,29 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+
+  notification-service:
+    build: ./notification-service
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SUBSCRIPTION_SERVICE_URL: http://subscription-service:8080
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@github-notifier.com}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-internal-secret}
+    depends_on:
+      subscription-service:
+        condition: service_healthy
 
   e2e:
     image: mcr.microsoft.com/playwright:v1.60.0-noble
@@ -131,7 +152,7 @@ services:
       BASE_URL: http://localhost:8080
     command: sh -c "npm ci && npx playwright test"
     depends_on:
-      app:
+      subscription-service:
         condition: service_healthy
 
 volumes:
