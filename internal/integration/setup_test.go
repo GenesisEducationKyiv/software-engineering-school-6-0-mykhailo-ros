@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github-release-notifier/internal/cache"
 	"github-release-notifier/internal/db"
 	"github-release-notifier/internal/github"
 	"github-release-notifier/internal/handler"
@@ -93,22 +92,6 @@ func TestMain(m *testing.M) {
 
 	mustOK(runMigrations(testDB), "run migrations")
 
-	// -- redis --
-	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "redis:7-alpine",
-			ExposedPorts: []string{"6379/tcp"},
-			WaitingFor:   wait.ForListeningPort("6379/tcp").WithStartupTimeout(30 * time.Second),
-		},
-		Started: true,
-	})
-	mustOK(err, "start redis")
-	defer redisC.Terminate(ctx) //nolint:errcheck
-
-	redisHost, _ := redisC.Host(ctx)
-	redisPort, _ := redisC.MappedPort(ctx, "6379/tcp")
-	redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort.Port())
-
 	// -- github stub --
 	githubSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		githubStubMu.Lock()
@@ -135,8 +118,7 @@ func TestMain(m *testing.M) {
 	defer smtpStub.Close()
 
 	// -- wire application --
-	cacheClient := cache.NewCacheWithAddr(redisAddr)
-	githubClient := github.NewTestClient("", githubSrv.URL, cacheClient)
+	githubClient := github.NewTestClient("", githubSrv.URL)
 	mailerClient := mailer.NewMailer(smtpStub.Addr(), smtpStub.Port(), "testuser", "testpass", "test@test.com")
 	repo := repository.NewSubscriptionRepo(testDB)
 	svc := service.NewSubscription(repo, githubClient, mailerClient, "http://localhost")
