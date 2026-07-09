@@ -13,9 +13,11 @@ type Cache struct {
 }
 
 func NewCache() *Cache {
-	client := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_ADDR"),
-	})
+	return NewCacheWithAddr(os.Getenv("REDIS_ADDR"))
+}
+
+func NewCacheWithAddr(addr string) *Cache {
+	client := redis.NewClient(&redis.Options{Addr: addr})
 	return &Cache{client: client}
 }
 

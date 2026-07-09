@@ -71,6 +71,7 @@ func main() {
 	r.GET("/api/confirm/:token", h.Confirm)
 	r.GET("/api/unsubscribe/:token", h.Unsubscribe)
 	r.GET("/api/subscriptions", h.GetSubscriptions)
+	r.StaticFile("/", "./static/index.html")
 	r.Static("/swagger", "./static/swagger")
 	r.StaticFile("/swagger.yaml", "./swagger.yaml")
 
