@@ -27,6 +27,10 @@ The functionality of this monolith API is simple and it was designed for one pur
 
 ## 2. Architecture
 
+> This section describes the original hw1-4 monolith. The system has since been split into
+> `subscription-service` + `notification-service`; see [docs/architecture.md](docs/architecture.md)
+> for the current architecture (diagrams, layering, and the Subscribe saga).
+
 The whole functionality was divided between 6 layers and a background process scheduler that is responsible for running core functions every 10 minutes. 
 
 #### The Layers are:
